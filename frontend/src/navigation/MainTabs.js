@@ -1,9 +1,9 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/home/HomeScreen';
-import LunchScreen from '../screens/lunch/LunchScreen';
-import ReportScreen from '../screens/report/ReportScreen';
-import ScheduleScreen from '../screens/schedule/ScheduleScreen';
+import LunchScreen from '../screens/cantina/CantinaScreen';
+import ReportScreen from '../screens/mural/MuralScreen';
+import ScheduleScreen from '../screens/horarios/HorariosScreen';
 import { colors } from '../theme/colors';
 
 const Tab = createBottomTabNavigator();

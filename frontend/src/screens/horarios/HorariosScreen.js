@@ -7,8 +7,7 @@ import ClassCard from '../../components/ClassCard';
 import { colors, radius, spacing } from '../../theme/colors';
 import { schedule, weekDays } from '../../data/mockData';
 
-// Maps each weekday key to the date label shown under the title.
-// In a real integration this would come from the current week's dates.
+
 const dateLabels = {
   Seg: 'Segunda-feira, 22 de junho',
   Ter: 'Terça-feira, 22 de junho',
