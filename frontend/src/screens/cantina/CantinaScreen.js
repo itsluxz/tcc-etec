@@ -7,124 +7,123 @@ import { colors, radius, spacing } from '../../theme/colors';
 import { lunch } from '../../data/mockData';
 
 export default function LunchScreen() {
-  // null = not answered yet, true = coming, false = not coming.
-  const [attending, setAttending] = useState(null);
+  const [vaiAlmocar, definirPresenca] = useState(null);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Almoço</Text>
-        <Text style={styles.subtitle}>{lunch.dateLabel}</Text>
+    <SafeAreaView style={estilos.areaSegura} edges={['top']}>
+      <ScrollView contentContainerStyle={estilos.conteudo} showsVerticalScrollIndicator={false}>
+        <Text style={estilos.titulo}>Almoço</Text>
+        <Text style={estilos.subtitulo}>{lunch.dateLabel}</Text>
 
-        <Card style={styles.confirmCard}>
-          <Text style={styles.confirmTitle}>Você vai almoçar hoje?</Text>
-          <Text style={styles.confirmSubtitle}>Confirme até as 9h para a cozinha se organizar.</Text>
+        <Card style={estilos.cartaoConfirmacao}>
+          <Text style={estilos.tituloConfirmacao}>Você vai almoçar hoje?</Text>
+          <Text style={estilos.subtituloConfirmacao}>Confirme até as 9h para a cozinha se organizar.</Text>
 
-          <View style={styles.buttonsRow}>
+          <View style={estilos.linhaBotoes}>
             <Pressable
-              style={[styles.button, styles.yesButton, attending === true && styles.yesButtonActive]}
-              onPress={() => setAttending(true)}
+              style={[ estilos.botao, estilos.botaoSim, vaiAlmocar === true && estilos.botaoSimAtivo]}
+              onPress={() => definirPresenca(true)}
             >
               <Ionicons
                 name="checkmark"
                 size={16}
-                color={attending === true ? colors.textInverse : colors.success}
+                color={vaiAlmocar === true ? colors.textInverse : colors.success}
               />
-              <Text style={[styles.buttonText, { color: attending === true ? colors.textInverse : colors.success }]}>
+              <Text style={[estilos.textoBotao, { color: vaiAlmocar === true ? colors.textInverse : colors.success }]}>
                 {' '}Sim, vou
               </Text>
             </Pressable>
 
             <Pressable
-              style={[styles.button, styles.noButton, attending === false && styles.noButtonActive]}
-              onPress={() => setAttending(false)}
+              style={[estilos.botao, estilos.botaoNao, vaiAlmocar === false && estilos.botaoNaoAtivo]}
+              onPress={() => definirPresenca(false)}
             >
               <Ionicons
                 name="close"
                 size={16}
-                color={attending === false ? colors.textInverse : colors.danger}
+                color={vaiAlmocar === false ? colors.textInverse : colors.danger}
               />
-              <Text style={[styles.buttonText, { color: attending === false ? colors.textInverse : colors.danger }]}>
+              <Text style={[estilos.textoBotao, { color: vaiAlmocar === false ? colors.textInverse : colors.danger }]}>
                 {' '}Não vou
               </Text>
             </Pressable>
           </View>
 
-          <Text style={styles.helperText}>
-            {attending === null
+          <Text style={estilos.textoAjuda}>
+            {vaiAlmocar === null
               ? 'Toque para confirmar sua presença.'
-              : attending
+              : vaiAlmocar
               ? 'Presença confirmada. Bom apetite! 🍽️'
               : 'Ausência registrada para hoje.'}
           </Text>
         </Card>
 
-        <Text style={styles.sectionTitle}>Cardápio do dia</Text>
+        <Text style={estilos.tituloSecao}>Cardápio do dia</Text>
 
         <Card>
-          {lunch.menu.map((item, index) => (
+          {lunch.menu.map((item, indice) => (
             <View
               key={item.id}
-              style={[styles.menuRow, index < lunch.menu.length - 1 && styles.menuDivider]}
+              style={[estilos.linhaCardapio, indice < lunch.menu.length - 1 && estilos.divisorCardapio]}
             >
-              <View style={styles.menuIconWrap}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+              <View style={estilos.areaIconeCardapio}>
+                <Text style={estilos.iconeCardapio}>{item.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.menuLabel}>{item.label.toUpperCase()}</Text>
-                <Text style={styles.menuValue}>{item.value}</Text>
+                <Text style={estilos.rotuloCardapio}>{item.label.toUpperCase()}</Text>
+                <Text style={estilos.valorCardapio}>{item.value}</Text>
               </View>
             </View>
           ))}
         </Card>
 
-        <View style={styles.noteRow}>
+        <View style={estilos.linhaObservacao}>
           <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.noteText}>{lunch.vegetarianNote}</Text>
+          <Text style={estilos.textoObservacao}>{lunch.vegetarianNote}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
+const estilos = StyleSheet.create({
+  areaSegura: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  content: {
+  conteudo: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
   },
-  title: {
+  titulo: {
     fontSize: 24,
     fontWeight: '800',
     color: colors.textPrimary,
   },
-  subtitle: {
+  subtitulo: {
     fontSize: 13,
     color: colors.textSecondary,
     marginBottom: spacing.md,
   },
-  confirmCard: {
+  cartaoConfirmacao: {
     marginBottom: spacing.lg,
   },
-  confirmTitle: {
+  tituloConfirmacao: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 4,
   },
-  confirmSubtitle: {
+  subtituloConfirmacao: {
     fontSize: 13,
     color: colors.textSecondary,
     marginBottom: spacing.md,
   },
-  buttonsRow: {
+  linhaBotoes: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  button: {
+  botao: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -133,46 +132,46 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
   },
-  yesButton: {
+  botaoSim: {
     borderColor: colors.success,
     backgroundColor: colors.tagGreen,
   },
-  yesButtonActive: {
+  botaoSimAtivo: {
     backgroundColor: colors.success,
   },
-  noButton: {
+  botaoNao: {
     borderColor: colors.danger,
     backgroundColor: '#FCEAEA',
   },
-  noButtonActive: {
+  botaoNaoAtivo: {
     backgroundColor: colors.danger,
   },
-  buttonText: {
+  textoBotao: {
     fontSize: 14,
     fontWeight: '700',
   },
-  helperText: {
+  textoAjuda: {
     textAlign: 'center',
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: spacing.md,
   },
-  sectionTitle: {
+  tituloSecao: {
     fontSize: 17,
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  menuRow: {
+  linhaCardapio: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
   },
-  menuDivider: {
+  divisorCardapio: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  menuIconWrap: {
+  areaIconeCardapio: {
     width: 40,
     height: 40,
     borderRadius: radius.sm,
@@ -181,28 +180,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
-  menuIcon: {
+  iconeCardapio: {
     fontSize: 18,
   },
-  menuLabel: {
+  rotuloCardapio: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.textSecondary,
     letterSpacing: 0.4,
     marginBottom: 2,
   },
-  menuValue: {
+  valorCardapio: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  noteRow: {
+  linhaObservacao: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.xs,
     marginTop: spacing.md,
   },
-  noteText: {
+  textoObservacao: {
     flex: 1,
     fontSize: 12,
     color: colors.primary,
