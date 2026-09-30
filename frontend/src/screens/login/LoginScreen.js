@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, spacing, shadow } from '../../theme/colors';
 
-// NOTE: this screen wasn't part of the files shared with me, so it's a
-// lightweight scaffold matching the rest of the app's visual style.
-// Wire the `handleLogin` function to your real authentication call —
-// it currently just navigates straight into the app.
+const blue = '#3264F5';
+const ink = '#172441';
+const muted = '#71809B';
+
 export default function LoginScreen({ navigation }) {
+  const [profile, setProfile] = useState('Aluno');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -16,25 +17,59 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <StatusBar style="light" backgroundColor="#173A9B" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.content}>
-          <View style={styles.brand}>
-            <Text style={styles.brandTitle}>Escola+</Text>
-            <Text style={styles.brandSubtitle}>Acompanhe sua vida escolar em um só lugar</Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Image source={require('../../../assets/elo-header-gradient.png')} style={styles.gradient} resizeMode="stretch" />
+            <Image source={require('../../../assets/elo-header-circle-right.png')} style={styles.circleRight} />
+            <Image source={require('../../../assets/elo-header-circle-left.png')} style={styles.circleLeft} />
+            <Image source={require('../../../assets/elo-header-curve.png')} style={styles.curve} resizeMode="stretch" />
+
+            <View style={styles.brand}>
+              <Image source={require('../../../assets/elo-logo-mark.png')} style={styles.logoMark} />
+              <Image source={require('../../../assets/elo-logo-detail.png')} style={styles.logoDetail} />
+              <Text style={styles.logoText}>elo</Text>
+            </View>
+
+            <Text style={styles.headline}>A escola perto{'\n'}de você.</Text>
+            <Text style={styles.headerSubtitle}>Avisos, rotina e recursos em{'\n'}um só lugar.</Text>
           </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>E-mail</Text>
+          <View style={styles.panel}>
+            <Text style={styles.title}>Entrar no elo</Text>
+            <Text style={styles.subtitle}>Escolha seu perfil para continuar.</Text>
+
+            <View style={styles.profiles}>
+              {['Aluno', 'Professor', 'Gestão'].map((item) => (
+                <Pressable
+                  key={item}
+                  onPress={() => setProfile(item)}
+                  style={[styles.profile, profile === item && styles.profileSelected]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: profile === item }}
+                >
+                  <Text style={[styles.profileText, profile === item && styles.profileTextSelected]}>{item}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.label}>E-mail institucional</Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder="seuemail@escola.com"
-              placeholderTextColor={colors.textSecondary}
+              placeholder="seu.nome@escola.edu.br"
+              placeholderTextColor="#AAB5C8"
               autoCapitalize="none"
+              autoComplete="email"
               keyboardType="email-address"
               style={styles.input}
             />
@@ -43,91 +78,62 @@ export default function LoginScreen({ navigation }) {
             <TextInput
               value={password}
               onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor={colors.textSecondary}
+              placeholder="••••••••••"
+              placeholderTextColor="#AAB5C8"
               secureTextEntry
               style={styles.input}
             />
 
-            <Pressable style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.forgot}>Esqueceu a senha?</Text>
+
+            <Pressable style={styles.button} onPress={handleLogin} accessibilityRole="button">
+              <Text style={styles.buttonText}>Entrar no portal</Text>
             </Pressable>
 
-            <Pressable>
-              <Text style={styles.forgotText}>Esqueci minha senha</Text>
-            </Pressable>
+            <Text style={styles.help}>Precisa de ajuda para acessar?</Text>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
+  screen: { flex: 1, backgroundColor: '#173A9B' },
+  flex: { flex: 1 },
+  scrollContent: { flexGrow: 1, backgroundColor: '#FFFFFF' },
+  header: { height: 301, overflow: 'hidden', backgroundColor: '#173A9B' },
+  gradient: { position: 'absolute', top: -24, left: 0, width: '100%', height: 350 },
+  circleRight: { position: 'absolute', top: -86, right: -63, width: 236, height: 236 },
+  circleLeft: { position: 'absolute', top: 221, left: -47, width: 180, height: 180 },
+  curve: { position: 'absolute', top: 79, left: -30, width: 427, height: 198 },
+  brand: { flexDirection: 'row', alignItems: 'center', marginTop: 35, marginLeft: 27 },
+  logoMark: { width: 22, height: 22 },
+  logoDetail: { position: 'absolute', left: 6, top: 8, width: 13, height: 8 },
+  logoText: { marginLeft: 9, color: '#FFFFFF', fontSize: 23, fontWeight: '700' },
+  headline: { marginTop: 42, marginLeft: 28, color: '#FFFFFF', fontSize: 31, lineHeight: 37, fontWeight: '700' },
+  headerSubtitle: { marginTop: 10, marginLeft: 28, color: '#DFE8FF', fontSize: 14, lineHeight: 22 },
+  panel: {
+    flexGrow: 1,
+    marginTop: -1,
+    paddingTop: 20,
+    paddingHorizontal: 26,
+    paddingBottom: 34,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    backgroundColor: '#FFFFFF',
   },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  brand: {
-    marginBottom: spacing.xl,
-  },
-  brandTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: spacing.xs,
-  },
-  brandSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  form: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    ...shadow.card,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  buttonText: {
-    color: colors.textInverse,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  forgotText: {
-    textAlign: 'center',
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  title: { color: ink, fontSize: 22, fontWeight: '700', lineHeight: 27 },
+  subtitle: { marginTop: 4, color: muted, fontSize: 12, lineHeight: 15 },
+  profiles: { flexDirection: 'row', gap: 10, marginTop: 19, marginBottom: 26 },
+  profile: { flex: 1, height: 43, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E4EBF5', borderRadius: 11 },
+  profileSelected: { borderColor: blue, backgroundColor: '#E8EDFF' },
+  profileText: { color: ink, fontSize: 12, fontWeight: '700' },
+  profileTextSelected: { color: blue },
+  label: { marginBottom: 8, color: ink, fontSize: 11, fontWeight: '700' },
+  input: { height: 49, marginBottom: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: '#E4EBF5', borderRadius: 11, color: ink, fontSize: 13 },
+  forgot: { alignSelf: 'flex-end', marginTop: -9, color: blue, fontSize: 11, fontWeight: '700' },
+  button: { height: 48, marginTop: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: blue },
+  buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  help: { marginTop: 24, color: muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 });

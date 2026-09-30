@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const usuariosRoutes = require("./routes/usuarios.routes");
+const usuariosRoutes = require("./routes/usuarios/usuarios.routes");
 
 //chamando as funções que serão usadas aqui
 app.use(cors());
