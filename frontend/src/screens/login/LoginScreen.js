@@ -13,7 +13,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
 
   function handleLogin() {
-    navigation.replace('Main');
+    navigation.replace('Main', { profile });
   }
 
   return (

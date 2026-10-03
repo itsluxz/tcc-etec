@@ -1,23 +1,24 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/home/HomeScreen';
-import LunchScreen from '../screens/cantina/CantinaScreen';
-import ReportScreen from '../screens/mural/MuralScreen';
-import ScheduleScreen from '../screens/horarios/HorariosScreen';
+import CantinaScreen from '../screens/cantina/CantinaScreen';
+import MuralScreen from '../screens/mural/MuralScreen';
+import ReservasScreen from '../screens/reservas/ReservasScreen';
 import { colors } from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
 
 const icons = {
   Início: { active: 'home', inactive: 'home-outline' },
-  Almoço: { active: 'restaurant', inactive: 'restaurant-outline' },
-  Boletim: { active: 'document-text', inactive: 'document-text-outline' },
-  Horário: { active: 'calendar', inactive: 'calendar-outline' },
+  Merenda: { active: 'restaurant', inactive: 'restaurant-outline' },
+  Mural: { active: 'document-text', inactive: 'document-text-outline' },
+  Reservas: { active: 'flask', inactive: 'flask-outline' },
 };
 
-export default function MainTabs() {
+export default function MainTabs({ route }) {
   return (
     <Tab.Navigator
+      initialRouteName={route.params?.profile === 'Professor' ? 'Reservas' : 'Início'}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -38,10 +39,10 @@ export default function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Início" component={HomeScreen} />
-      <Tab.Screen name="Almoço" component={LunchScreen} />
-      <Tab.Screen name="Boletim" component={ReportScreen} />
-      <Tab.Screen name="Horário" component={ScheduleScreen} />
+      <Tab.Screen name="Início" component={HomeScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
     </Tab.Navigator>
   );
 }
