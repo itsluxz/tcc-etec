@@ -35,6 +35,8 @@ const studentTabs = [
   },
   {
     name: 'Ajuda',
+    route: 'Ajuda',
+    activeIcon: require('../../assets/elo-help-tab-active.png'),
     inactiveIcon: require('../../assets/elo-home-tab-help.png'),
     width: 16,
     height: 16,
@@ -55,7 +57,8 @@ const professorTabs = [
     width: 17, height: 18,
   },
   {
-    name: 'Ajuda',
+    name: 'Ajuda', route: 'Ajuda',
+    activeIcon: require('../../assets/elo-help-tab-active.png'),
     inactiveIcon: require('../../assets/elo-home-tab-help.png'),
     width: 16, height: 16,
   },

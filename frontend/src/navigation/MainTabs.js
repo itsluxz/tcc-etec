@@ -4,6 +4,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import CantinaScreen from '../screens/cantina/CantinaScreen';
 import MuralScreen from '../screens/mural/MuralScreen';
 import ReservasScreen from '../screens/reservas/ReservasScreen';
+import AtendimentoScreen from '../screens/atendimento/AtendimentoScreen';
 import { colors } from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
@@ -13,6 +14,7 @@ const icons = {
   Merenda: { active: 'restaurant', inactive: 'restaurant-outline' },
   Mural: { active: 'document-text', inactive: 'document-text-outline' },
   Reservas: { active: 'flask', inactive: 'flask-outline' },
+  Ajuda: { active: 'chatbox', inactive: 'chatbox-outline' },
 };
 
 export default function MainTabs({ route }) {
@@ -43,6 +45,7 @@ export default function MainTabs({ route }) {
       <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Ajuda" component={AtendimentoScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
     </Tab.Navigator>
   );
 }
