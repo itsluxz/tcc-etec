@@ -10,7 +10,7 @@ const shortcuts = [
   { title: 'Mural', icon: require('../../../assets/elo-home-mural.png'), tint: '#E8EEFF', route: 'Mural' },
   { title: 'Merenda', icon: require('../../../assets/elo-home-meal.png'), tint: '#E4F7F3', route: 'Merenda' },
   { title: 'Reservas', icon: require('../../../assets/elo-reservas-flask-blue.png'), tint: '#E8EEFF', route: 'Reservas' },
-  { title: 'Ajuda', icon: require('../../../assets/elo-home-help.png'), tint: '#F1EBFF' },
+  { title: 'Ajuda', icon: require('../../../assets/elo-home-help.png'), tint: '#F1EBFF', route: 'Ajuda' },
 ];
 
 export default function HomeScreen({ navigation }) {
