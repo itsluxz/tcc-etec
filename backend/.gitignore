@@ -1,15 +1,15 @@
-# Dependencias
-node_modules/
+# Ambiente virtual e cache do Python
+.venv/
+__pycache__/
+*.pyc
 
 # Configuracoes locais e segredos
 .env
 .env.*
 !.env.example
 
-# Arquivos gerados
-dist/
-coverage/
-*.log
+# Banco local
+banco_dados/*.db
 
 # Arquivos do sistema
 .DS_Store
