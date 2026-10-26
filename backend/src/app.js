@@ -1,6 +1,6 @@
 const express = require('express');
 const routes = require('./routes');
-const errorHandler = require('./middlewares/error.middleware');
+const errorHandler = require('./middlewares/erro.middleware');
 
 const app = express();
 app.use(express.json());

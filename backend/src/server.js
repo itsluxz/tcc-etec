@@ -1,3 +1,6 @@
+require('dotenv').config();
+const app = require('./app');
+
 // A porta que é aberta
 const PORT = process.env.PORT || 3000;
 
