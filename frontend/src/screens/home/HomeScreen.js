@@ -8,6 +8,7 @@ const blue = '#3264F5';
 
 const shortcuts = [
   { title: 'Mural', icon: require('../../../assets/elo-home-mural.png'), tint: '#E8EEFF', route: 'Mural' },
+  { title: 'Boletim', icon: require('../../../assets/elo-home-tab-agenda.png'), tint: '#E4F7F3', route: 'Boletim' },
   { title: 'Merenda', icon: require('../../../assets/elo-home-meal.png'), tint: '#E4F7F3', route: 'Merenda' },
   { title: 'Reservas', icon: require('../../../assets/elo-reservas-flask-blue.png'), tint: '#E8EEFF', route: 'Reservas' },
   { title: 'Ajuda', icon: require('../../../assets/elo-home-help.png'), tint: '#F1EBFF', route: 'Ajuda' },
@@ -53,7 +54,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         <View style={styles.shortcutGrid}>
-          {[0, 2].map((start) => (
+          {Array.from({ length: Math.ceil(shortcuts.length / 2) }, (_, index) => index * 2).map((start) => (
             <View key={start} style={styles.shortcutRow}>
               {shortcuts.slice(start, start + 2).map((item) => (
                 <Pressable
