@@ -18,6 +18,13 @@ const studentTabs = [
     height: 16,
   },
   {
+    name: 'Boletim',
+    route: 'Boletim',
+    inactiveIcon: require('../../assets/elo-home-tab-agenda.png'),
+    width: 16,
+    height: 16,
+  },
+  {
     name: 'Merenda',
     route: 'Merenda',
     inactiveIcon: require('../../assets/elo-home-tab-meal.png'),
