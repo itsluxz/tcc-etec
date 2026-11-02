@@ -1,12 +1,3 @@
-"""Insere um usuário de teste no Supabase.
-
-As tabelas são criadas pelo painel do Supabase (SQL Editor ou Table Editor);
-este script só popula dados para testar a API.
-
-Uso, dentro da pasta backend:
-    python banco_dados/criar_banco_teste.py
-"""
-
 import os
 import sys
 

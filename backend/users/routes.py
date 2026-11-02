@@ -1,6 +1,6 @@
 import bcrypt
 
-from fastapi import HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter    
 from pydantic import BaseModel, Field
 from postgrest.exceptions import APIError
 from database import supabase
@@ -48,14 +48,14 @@ def login(dados: LoginEntrada):
     try:
         resposta = supabase.table("usuarios").select("*").eq("email", dados.email).execute()
 
-    except APIError:
-        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
+    except APIError as error:
+        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados:{error}")
 
     usuario = resposta.data[0] if resposta.data else None
 
-    # mesma mensagem para email inexistente e senha errada, para não revelar quem está cadastrado
+
     if not usuario or not senha_confere(dados.senha, usuario["senha"]):
-        raise HTTPException(status_code=401, detail="Email ou senha inválidos")
+        raise HTTPException (status_code=401, detail="Email ou senha inválidos> ")
 
     if not usuario["ativo"]:
         raise HTTPException(status_code=403, detail="Usuário desativado")
