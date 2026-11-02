@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/home/HomeScreen';
 import CantinaScreen from '../screens/cantina/CantinaScreen';
 import MuralScreen from '../screens/mural/MuralScreen';
+import BoletimScreen from '../screens/boletim/BoletimScreen';
 import ReservasScreen from '../screens/reservas/ReservasScreen';
 import AtendimentoScreen from '../screens/atendimento/AtendimentoScreen';
 import { colors } from '../theme/colors';
@@ -11,8 +12,9 @@ const Tab = createBottomTabNavigator();
 
 const icons = {
   Início: { active: 'home', inactive: 'home-outline' },
-  Merenda: { active: 'restaurant', inactive: 'restaurant-outline' },
+  Boletim: { active: 'school', inactive: 'school-outline' },
   Mural: { active: 'document-text', inactive: 'document-text-outline' },
+  Merenda: { active: 'restaurant', inactive: 'restaurant-outline' },
   Reservas: { active: 'flask', inactive: 'flask-outline' },
   Ajuda: { active: 'chatbox', inactive: 'chatbox-outline' },
 };
@@ -42,6 +44,7 @@ export default function MainTabs({ route }) {
       })}
     >
       <Tab.Screen name="Início" component={HomeScreen} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Boletim" component={BoletimScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: { display: 'none' } }} />
       <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
