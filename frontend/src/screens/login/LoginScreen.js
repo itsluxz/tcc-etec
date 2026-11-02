@@ -2,18 +2,40 @@ import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../services/api';
 
 const blue = '#3264F5';
 const ink = '#172441';
 const muted = '#71809B';
 
+const profiles = {
+  ALUNO: 'Aluno',
+  PROFESSOR: 'Professor',
+  GESTAO: 'Gestão',
+};
+
 export default function LoginScreen({ navigation }) {
-  const [profile, setProfile] = useState('Aluno');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  function handleLogin() {
-    navigation.replace('Main', { profile });
+  async function handleLogin() {
+    if (!email.trim() || !password) {
+      setErrorMessage('Preencha o e-mail e a senha.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+
+    try {
+      const { data } = await api.post('/login', { email: email.trim(), senha: password });
+      navigation.replace('Main', { profile: profiles[data.tipo] ?? 'Aluno' });
+    } catch (error) {
+      setErrorMessage(error.response?.data?.detail ?? 'Não foi possível conectar ao servidor.');
+      setLoading(false);
+    }
   }
 
   return (
@@ -46,21 +68,7 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.panel}>
             <Text style={styles.title}>Entrar no elo</Text>
-            <Text style={styles.subtitle}>Escolha seu perfil para continuar.</Text>
-
-            <View style={styles.profiles}>
-              {['Aluno', 'Professor', 'Gestão'].map((item) => (
-                <Pressable
-                  key={item}
-                  onPress={() => setProfile(item)}
-                  style={[styles.profile, profile === item && styles.profileSelected]}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: profile === item }}
-                >
-                  <Text style={[styles.profileText, profile === item && styles.profileTextSelected]}>{item}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Text style={styles.subtitle}>Use seu e-mail e senha para continuar.</Text>
 
             <Text style={styles.label}>E-mail institucional</Text>
             <TextInput
@@ -86,8 +94,16 @@ export default function LoginScreen({ navigation }) {
 
             <Text style={styles.forgot}>Esqueceu a senha?</Text>
 
-            <Pressable style={styles.button} onPress={handleLogin} accessibilityRole="button">
-              <Text style={styles.buttonText}>Entrar no portal</Text>
+            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+
+            <Pressable
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: loading }}
+            >
+              <Text style={styles.buttonText}>{loading ? 'Entrando...' : 'Entrar no portal'}</Text>
             </Pressable>
 
             <Text style={styles.help}>Precisa de ajuda para acessar?</Text>
@@ -124,16 +140,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   title: { color: ink, fontSize: 22, fontWeight: '700', lineHeight: 27 },
-  subtitle: { marginTop: 4, color: muted, fontSize: 12, lineHeight: 15 },
-  profiles: { flexDirection: 'row', gap: 10, marginTop: 19, marginBottom: 26 },
-  profile: { flex: 1, height: 43, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E4EBF5', borderRadius: 11 },
-  profileSelected: { borderColor: blue, backgroundColor: '#E8EDFF' },
-  profileText: { color: ink, fontSize: 12, fontWeight: '700' },
-  profileTextSelected: { color: blue },
+  subtitle: { marginTop: 4, marginBottom: 26, color: muted, fontSize: 12, lineHeight: 15 },
   label: { marginBottom: 8, color: ink, fontSize: 11, fontWeight: '700' },
   input: { height: 49, marginBottom: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: '#E4EBF5', borderRadius: 11, color: ink, fontSize: 13 },
   forgot: { alignSelf: 'flex-end', marginTop: -9, color: blue, fontSize: 11, fontWeight: '700' },
+  error: { marginTop: 16, marginBottom: -7, color: '#D92D20', fontSize: 12, fontWeight: '700' },
   button: { height: 48, marginTop: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: blue },
+  buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   help: { marginTop: 24, color: muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
 });
