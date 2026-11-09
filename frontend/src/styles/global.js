@@ -1,32 +1,18 @@
-// Central place for the app's visual language.
-// Keeping colors/spacing here means every screen stays consistent
-// and the whole palette can be re-themed from one file.
-
+// Shared design tokens used across screens and reusable components.
 export const colors = {
-  // Brand
   primary: '#7C3AED',
   primaryDark: '#5B21B6',
   primaryLight: '#EDE4FD',
-
-  // Backgrounds
   background: '#F5F3FB',
   card: '#FFFFFF',
-
-  // Text
   textPrimary: '#1F1B2E',
   textSecondary: '#8A8698',
   textInverse: '#FFFFFF',
-
-  // Status / accents
   success: '#22A65A',
   warning: '#E08A2C',
   danger: '#E24C4B',
   info: '#3B6FE0',
-
-  // Borders / dividers
   border: '#EEECF5',
-
-  // Tag backgrounds
   tagPink: '#FCE7F3',
   tagPinkText: '#D6336C',
   tagBlue: '#E3EBFC',
@@ -41,6 +27,21 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+};
+
+export const fontSizes = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 17,
+  xl: 23,
+};
+
+export const fontWeights = {
+  regular: '400',
+  semibold: '600',
+  bold: '700',
+  extraBold: '800',
 };
 
 export const radius = {

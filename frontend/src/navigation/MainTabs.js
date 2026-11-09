@@ -6,7 +6,8 @@ import MuralScreen from '../screens/mural/MuralScreen';
 import BoletimScreen from '../screens/boletim/BoletimScreen';
 import ReservasScreen from '../screens/reservas/ReservasScreen';
 import AtendimentoScreen from '../screens/atendimento/AtendimentoScreen';
-import { colors } from '../theme/colors';
+import { colors } from '../styles/global';
+import { navigationStyles } from '../styles/navigation';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +21,11 @@ const icons = {
 };
 
 export default function MainTabs({ route }) {
+  const profileParams = {
+    profile: route.params?.profile,
+  };
+  const homeParams = { ...profileParams, user: route.params?.user };
+
   return (
     <Tab.Navigator
       initialRouteName={route.params?.profile === 'Professor' ? 'Reservas' : 'Início'}
@@ -27,28 +33,20 @@ export default function MainTabs({ route }) {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
-          borderTopColor: colors.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-        },
+        tabBarStyle: navigationStyles.tabBar,
+        tabBarLabelStyle: navigationStyles.tabLabel,
         tabBarIcon: ({ focused, color, size }) => {
           const icon = icons[route.name];
           return <Ionicons name={focused ? icon.active : icon.inactive} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="Início" component={HomeScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Boletim" component={BoletimScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
-      <Tab.Screen name="Ajuda" component={AtendimentoScreen} initialParams={{ profile: route.params?.profile }} options={{ tabBarStyle: { display: 'none' } }} />
+      <Tab.Screen name="Início" component={HomeScreen} initialParams={homeParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Boletim" component={BoletimScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={profileParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Ajuda" component={AtendimentoScreen} initialParams={profileParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
     </Tab.Navigator>
   );
 }

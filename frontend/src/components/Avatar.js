@@ -1,25 +1,20 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../theme/colors';
+import { View, Text } from 'react-native';
+import { colors } from '../styles/global';
+import {
+  avatarStyles,
+  createAvatarContainerStyle,
+  createAvatarTextStyle,
+} from '../styles/components';
 
 export default function Avatar({ initials, size = 44, background = colors.primary, textColor = colors.textInverse }) {
   return (
     <View
       style={[
-        styles.avatar,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: background },
+        avatarStyles.avatar,
+        createAvatarContainerStyle(size, background),
       ]}
     >
-      <Text style={[styles.text, { color: textColor, fontSize: size * 0.36 }]}>{initials}</Text>
+      <Text style={[avatarStyles.text, createAvatarTextStyle(size, textColor)]}>{initials}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    fontWeight: '700',
-  },
-});
