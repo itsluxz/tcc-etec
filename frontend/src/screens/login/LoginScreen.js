@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import api from '../../services/api';
-
-const blue = '#3264F5';
-const ink = '#172441';
-const muted = '#71809B';
+import { authenticationApi } from '../../services/endpoints';
+import { getApiErrorMessage } from '../../services/errors';
+import { primaryButtonStyles } from '../../styles/common';
+import { loginColors, loginStyles as styles } from '../../styles/screens/login';
 
 const profiles = {
   ALUNO: 'Aluno',
@@ -30,17 +29,20 @@ export default function LoginScreen({ navigation }) {
     setErrorMessage('');
 
     try {
-      const { data } = await api.post('/login', { email: email.trim(), senha: password });
-      navigation.replace('Main', { profile: profiles[data.tipo] ?? 'Aluno' });
+      const { data } = await authenticationApi.login({ email: email.trim(), senha: password });
+      navigation.replace('Main', {
+        profile: profiles[data.tipo] ?? 'Aluno',
+        user: { nome: data.nome },
+      });
     } catch (error) {
-      setErrorMessage(error.response?.data?.detail ?? 'Não foi possível conectar ao servidor.');
+      setErrorMessage(getApiErrorMessage(error, 'Não foi possível conectar ao servidor.'));
       setLoading(false);
     }
   }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <StatusBar style="light" backgroundColor="#173A9B" />
+      <StatusBar style="light" backgroundColor={loginColors.statusBar} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -75,7 +77,7 @@ export default function LoginScreen({ navigation }) {
               value={email}
               onChangeText={setEmail}
               placeholder="seu.nome@escola.edu.br"
-              placeholderTextColor="#AAB5C8"
+              placeholderTextColor={loginColors.placeholder}
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -87,7 +89,7 @@ export default function LoginScreen({ navigation }) {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••••"
-              placeholderTextColor="#AAB5C8"
+              placeholderTextColor={loginColors.placeholder}
               secureTextEntry
               style={styles.input}
             />
@@ -97,13 +99,13 @@ export default function LoginScreen({ navigation }) {
             {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
 
             <Pressable
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[primaryButtonStyles.button, styles.loginButton, loading && primaryButtonStyles.disabled]}
               onPress={handleLogin}
               disabled={loading}
               accessibilityRole="button"
               accessibilityState={{ disabled: loading }}
             >
-              <Text style={styles.buttonText}>{loading ? 'Entrando...' : 'Entrar no portal'}</Text>
+              <Text style={primaryButtonStyles.label}>{loading ? 'Entrando...' : 'Entrar no portal'}</Text>
             </Pressable>
 
             <Text style={styles.help}>Precisa de ajuda para acessar?</Text>
@@ -113,40 +115,3 @@ export default function LoginScreen({ navigation }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#173A9B' },
-  flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, backgroundColor: '#FFFFFF' },
-  header: { height: 301, overflow: 'hidden', backgroundColor: '#173A9B' },
-  gradient: { position: 'absolute', top: -24, left: 0, width: '100%', height: 350 },
-  circleRight: { position: 'absolute', top: -86, right: -63, width: 236, height: 236 },
-  circleLeft: { position: 'absolute', top: 221, left: -47, width: 180, height: 180 },
-  curve: { position: 'absolute', top: 79, left: -30, width: 427, height: 198 },
-  brand: { flexDirection: 'row', alignItems: 'center', marginTop: 35, marginLeft: 27 },
-  logoMark: { width: 22, height: 22 },
-  logoDetail: { position: 'absolute', left: 6, top: 8, width: 13, height: 8 },
-  logoText: { marginLeft: 9, color: '#FFFFFF', fontSize: 23, fontWeight: '700' },
-  headline: { marginTop: 42, marginLeft: 28, color: '#FFFFFF', fontSize: 31, lineHeight: 37, fontWeight: '700' },
-  headerSubtitle: { marginTop: 10, marginLeft: 28, color: '#DFE8FF', fontSize: 14, lineHeight: 22 },
-  panel: {
-    flexGrow: 1,
-    marginTop: -1,
-    paddingTop: 20,
-    paddingHorizontal: 26,
-    paddingBottom: 34,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    backgroundColor: '#FFFFFF',
-  },
-  title: { color: ink, fontSize: 22, fontWeight: '700', lineHeight: 27 },
-  subtitle: { marginTop: 4, marginBottom: 26, color: muted, fontSize: 12, lineHeight: 15 },
-  label: { marginBottom: 8, color: ink, fontSize: 11, fontWeight: '700' },
-  input: { height: 49, marginBottom: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: '#E4EBF5', borderRadius: 11, color: ink, fontSize: 13 },
-  forgot: { alignSelf: 'flex-end', marginTop: -9, color: blue, fontSize: 11, fontWeight: '700' },
-  error: { marginTop: 16, marginBottom: -7, color: '#D92D20', fontSize: 12, fontWeight: '700' },
-  button: { height: 48, marginTop: 23, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: blue },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-  help: { marginTop: 24, color: muted, fontSize: 12, fontWeight: '700', textAlign: 'center' },
-});

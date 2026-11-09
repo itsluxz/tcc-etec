@@ -33,15 +33,15 @@ Desenvolver e implementar uma plataforma web integrada (Portal Educacional) que 
 
 **Front-end**
 - React Native
-- HTML
-- CSS
+- Expo
+- Axios
 
 **Back-end**
-- Node.js
+- FastAPI
 - Python
 
 **Banco de dados**
-- PostgreSQL
+- PostgreSQL (Supabase)
 
 **Ferramentas e ambientes auxiliares**
 - VSCode
@@ -55,6 +55,12 @@ Desenvolver e implementar uma plataforma web integrada (Portal Educacional) que 
 - [PostgreSQL](https://www.postgresql.org/)
 - [Git](https://git-scm.com/)
 - [Expo Go](https://expo.dev/go) (app no celular, para testar o front-end mobile)
+
+## Configuração da API
+
+O front-end usa a instância Axios em `frontend/src/services/api.js`. Configure `EXPO_PUBLIC_API_URL` no ambiente Expo; `frontend/.env.example` mostra o formato. Para testar em um celular físico, use no lugar de `localhost` o endereço IP acessível da máquina que executa a API. A API também permite as origens locais usuais do Expo Web (porta 8081).
+
+O login usa `POST /login` e mantém os dados retornados do usuário autenticado apenas na navegação em memória. O cardápio e suas datas usam `GET /cardapios`. Embora o backend tenha rotas para outros recursos, as rotas de avisos, eventos, salas e reservas não estão implementadas. As notas não têm uma rota declarada. A listagem de atendimentos não filtra nem autoriza por usuário, então o aplicativo não a consulta para evitar exibir dados de outra pessoa.
 
 ## 👥 Equipe
 

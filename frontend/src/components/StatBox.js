@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, shadow, spacing } from '../theme/colors';
+import { View, Text } from 'react-native';
+import { statBoxStyles } from '../styles/components';
 
 // `highlighted` renders the solid-purple version (e.g. "Média geral"),
 // otherwise it renders as a plain white card (e.g. "Frequência").
@@ -7,44 +7,12 @@ export default function StatBox({ label, value, highlighted }) {
   return (
     <View
       style={[
-        styles.box,
-        highlighted ? styles.highlighted : styles.plain,
+        statBoxStyles.box,
+        highlighted ? statBoxStyles.highlighted : statBoxStyles.plain,
       ]}
     >
-      <Text style={[styles.label, highlighted && styles.labelHighlighted]}>{label}</Text>
-      <Text style={[styles.value, highlighted && styles.valueHighlighted]}>{value}</Text>
+      <Text style={[statBoxStyles.label, highlighted && statBoxStyles.labelHighlighted]}>{label}</Text>
+      <Text style={[statBoxStyles.value, highlighted && statBoxStyles.valueHighlighted]}>{value}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  box: {
-    flex: 1,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  plain: {
-    backgroundColor: colors.card,
-    ...shadow.card,
-  },
-  highlighted: {
-    backgroundColor: colors.primary,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  labelHighlighted: {
-    color: colors.primaryLight,
-  },
-  value: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  valueHighlighted: {
-    color: colors.textInverse,
-  },
-});
