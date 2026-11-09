@@ -29,11 +29,8 @@ export default function LoginScreen({ navigation }) {
     setErrorMessage('');
 
     try {
-      const { data } = await authenticationApi.login({ email: email.trim(), senha: password });
-      navigation.replace('Main', {
-        profile: profiles[data.tipo] ?? 'Aluno',
-        user: { nome: data.nome },
-      });
+      const { data } = await api.post('/login', { email: email.trim(), senha: password });
+      navigation.replace('Main', { profile: profiles[data.tipo] ?? 'Aluno', usuario: data });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Não foi possível conectar ao servidor.'));
       setLoading(false);

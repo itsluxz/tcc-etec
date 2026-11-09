@@ -1,24 +1,27 @@
 import bcrypt
 
-from fastapi import HTTPException, APIRouter    
+from typing import Literal
+from fastapi import HTTPException, APIRouter
 from pydantic import BaseModel, Field
 from postgrest.exceptions import APIError
 from database import supabase
 
 router = APIRouter(tags=["users"])
 
+TipoUsuario = Literal["ALUNO", "PROFESSOR", "GESTAO"]
+
 # limites iguais aos das colunas da tabela usuarios
 class UsuarioEntrada(BaseModel):
     nome: str = Field(min_length=1, max_length=150)
     email: str = Field(min_length=3, max_length=150)
     senha: str = Field(min_length=6)
-    tipo: str = Field(min_length=1, max_length=20)
+    tipo: TipoUsuario
 
 class UsuarioAtualizacao(BaseModel):
     nome: str | None = Field(default=None, min_length=1, max_length=150)
     email: str | None = Field(default=None, min_length=3, max_length=150)
     senha: str | None = Field(default=None, min_length=6)
-    tipo: str | None = Field(default=None, min_length=1, max_length=20)
+    tipo: TipoUsuario | None = None
     ativo: bool | None = None
 
 class LoginEntrada(BaseModel):
@@ -49,13 +52,13 @@ def login(dados: LoginEntrada):
         resposta = supabase.table("usuarios").select("*").eq("email", dados.email).execute()
 
     except APIError as error:
-        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados:{error}")
+        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
 
     usuario = resposta.data[0] if resposta.data else None
 
 
     if not usuario or not senha_confere(dados.senha, usuario["senha"]):
-        raise HTTPException (status_code=401, detail="Email ou senha inválidos> ")
+        raise HTTPException (status_code=401, detail="Email ou senha inválidos ")
 
     if not usuario["ativo"]:
         raise HTTPException(status_code=403, detail="Usuário desativado")
@@ -64,9 +67,13 @@ def login(dados: LoginEntrada):
 
 
 @router.get("/usuarios", status_code=200)
-def listar_usuarios():
+def listar_usuarios(tipo: TipoUsuario | None = None):
     try:
-        resposta = supabase.table("usuarios").select("*").execute()
+        # ?tipo=PROFESSOR lista só os professores; sem filtro lista todos
+        consulta = supabase.table("usuarios").select("*")
+        if tipo:
+            consulta = consulta.eq("tipo", tipo)
+        resposta = consulta.execute()
 
         return [usuario_para_dict(linha) for linha in resposta.data]
 
