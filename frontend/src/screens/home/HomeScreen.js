@@ -68,6 +68,9 @@ export default function HomeScreen({ navigation, route }) {
     day: 'numeric',
     month: 'long',
   }).format(new Date());
+  const isProfessor = route.params?.profile === 'Professor';
+  // professor não tem acesso à merenda
+  const visibleShortcuts = isProfessor ? shortcuts.filter((item) => item.route !== 'Merenda') : shortcuts;
   const authenticatedName = route.params?.user?.nome;
   const userName = typeof authenticatedName === 'string' ? authenticatedName.trim() : '';
   const greetingName = userName ? userName.split(/\s+/)[0] : null;
@@ -128,9 +131,9 @@ export default function HomeScreen({ navigation, route }) {
         </View>
 
         <View style={styles.shortcutGrid}>
-          {Array.from({ length: Math.ceil(shortcuts.length / 2) }, (_, index) => index * 2).map((start) => (
+          {Array.from({ length: Math.ceil(visibleShortcuts.length / 2) }, (_, index) => index * 2).map((start) => (
             <View key={start} style={styles.shortcutRow}>
-              {shortcuts.slice(start, start + 2).map((item, index) => (
+              {visibleShortcuts.slice(start, start + 2).map((item, index) => (
                 <Pressable
                   key={item.title}
                   disabled={!item.route}
@@ -151,21 +154,25 @@ export default function HomeScreen({ navigation, route }) {
           ))}
         </View>
 
-        <Text style={styles.lunchTitle}>Merenda de hoje</Text>
-        <Pressable style={styles.lunchCard} onPress={() => navigation.navigate('Merenda')}>
-          <View style={styles.lunchIconOuter}>
-            <View style={styles.lunchIconInner}>
-              <Image source={require('../../../assets/elo-home-meal.png')} style={styles.mealIcon} />
-            </View>
-          </View>
-          <View style={styles.lunchText}>
-            <Text style={styles.lunchTime}>
-              {menuStatus === 'loading' ? 'Carregando cardápio...' : menuDateLabel}
-            </Text>
-            <Text style={styles.lunchMeal}>{menuTitle}</Text>
-            <Text style={styles.lunchSides}>{menuDescription}</Text>
-          </View>
-        </Pressable>
+        {!isProfessor && (
+          <>
+            <Text style={styles.lunchTitle}>Merenda de hoje</Text>
+            <Pressable style={styles.lunchCard} onPress={() => navigation.navigate('Merenda')}>
+              <View style={styles.lunchIconOuter}>
+                <View style={styles.lunchIconInner}>
+                  <Image source={require('../../../assets/elo-home-meal.png')} style={styles.mealIcon} />
+                </View>
+              </View>
+              <View style={styles.lunchText}>
+                <Text style={styles.lunchTime}>
+                  {menuStatus === 'loading' ? 'Carregando cardápio...' : menuDateLabel}
+                </Text>
+                <Text style={styles.lunchMeal}>{menuTitle}</Text>
+                <Text style={styles.lunchSides}>{menuDescription}</Text>
+              </View>
+            </Pressable>
+          </>
+        )}
 
         <View style={styles.notice}>
           <View style={styles.noticeDot} />
@@ -177,7 +184,7 @@ export default function HomeScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      <EloTabBar active="Início" navigation={navigation} />
+      <EloTabBar active="Início" navigation={navigation} variant={isProfessor ? 'professor' : 'student'} />
     </SafeAreaView>
   );
 }

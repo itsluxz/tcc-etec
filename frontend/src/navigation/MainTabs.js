@@ -21,10 +21,8 @@ const icons = {
 };
 
 export default function MainTabs({ route }) {
-  const profileParams = {
-    profile: route.params?.profile,
-  };
-  const homeParams = { ...profileParams, user: route.params?.user };
+  // todas as abas recebem o perfil e o usuário logado
+  const userParams = { profile: route.params?.profile, user: route.params?.user };
 
   return (
     <Tab.Navigator
@@ -41,12 +39,12 @@ export default function MainTabs({ route }) {
         },
       })}
     >
-      <Tab.Screen name="Início" component={HomeScreen} initialParams={homeParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
-      <Tab.Screen name="Boletim" component={BoletimScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
-      <Tab.Screen name="Mural" component={MuralScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
-      <Tab.Screen name="Merenda" component={CantinaScreen} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
-      <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={profileParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
-      <Tab.Screen name="Ajuda" component={AtendimentoScreen} initialParams={profileParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Início" component={HomeScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Boletim" component={BoletimScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Mural" component={MuralScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Merenda" component={CantinaScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Reservas" component={ReservasScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
+      <Tab.Screen name="Ajuda" component={AtendimentoScreen} initialParams={userParams} options={{ tabBarStyle: navigationStyles.hiddenTabBar }} />
     </Tab.Navigator>
   );
 }

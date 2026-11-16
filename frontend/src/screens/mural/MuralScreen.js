@@ -4,7 +4,7 @@ import EloTabBar from '../../components/EloTabBar';
 import { contentTopStyle } from '../../styles/common';
 import { muralStyles as styles } from '../../styles/screens/mural';
 
-export default function MuralScreen({ navigation }) {
+export default function MuralScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -57,7 +57,7 @@ export default function MuralScreen({ navigation }) {
           </Text>
         </View>
       </ScrollView>
-      <EloTabBar active="Mural" navigation={navigation} />
+      <EloTabBar active="Mural" navigation={navigation} variant={route.params?.profile === 'Professor' ? 'professor' : 'student'} />
     </SafeAreaView>
   );
 }

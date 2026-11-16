@@ -16,12 +16,15 @@ class UsuarioEntrada(BaseModel):
     email: str = Field(min_length=3, max_length=150)
     senha: str = Field(min_length=6)
     tipo: TipoUsuario
+    # só alunos têm turma
+    turma_id: int | None = None
 
 class UsuarioAtualizacao(BaseModel):
     nome: str | None = Field(default=None, min_length=1, max_length=150)
     email: str | None = Field(default=None, min_length=3, max_length=150)
     senha: str | None = Field(default=None, min_length=6)
     tipo: TipoUsuario | None = None
+    turma_id: int | None = None
     ativo: bool | None = None
 
 class LoginEntrada(BaseModel):
@@ -39,6 +42,11 @@ def senha_confere(senha, senha_hash):
     except ValueError:
         # senha salva sem hash (cadastrada fora da API)
         return False
+
+
+# o banco recusa o insert/update quando o e-mail já existe (regra usuarios_email_key)
+def email_duplicado(erro):
+    return "usuarios_email_key" in (erro.message or "")
 
 
 # nunca devolve a senha na resposta
@@ -67,12 +75,14 @@ def login(dados: LoginEntrada):
 
 
 @router.get("/usuarios", status_code=200)
-def listar_usuarios(tipo: TipoUsuario | None = None):
+def listar_usuarios(tipo: TipoUsuario | None = None, turma_id: int | None = None):
     try:
-        # ?tipo=PROFESSOR lista só os professores; sem filtro lista todos
+        # ?tipo=PROFESSOR lista só os professores; ?tipo=ALUNO&turma_id=1 lista os alunos da turma 1
         consulta = supabase.table("usuarios").select("*")
         if tipo:
             consulta = consulta.eq("tipo", tipo)
+        if turma_id:
+            consulta = consulta.eq("turma_id", turma_id)
         resposta = consulta.execute()
 
         return [usuario_para_dict(linha) for linha in resposta.data]
@@ -109,6 +119,8 @@ def criar_usuario(dados: UsuarioEntrada):
         }
 
     except APIError as erro:
+        if email_duplicado(erro):
+            raise HTTPException(status_code=409, detail="E-mail já cadastrado")
         raise HTTPException(status_code=400, detail=f"Não foi possível cadastrar o usuário: {erro.message}")
 
 
@@ -124,6 +136,8 @@ def atualizar_usuario(usuario_id: int, dados: UsuarioAtualizacao):
         resposta = supabase.table("usuarios").update(alteracoes).eq("id", usuario_id).execute()
 
     except APIError as erro:
+        if email_duplicado(erro):
+            raise HTTPException(status_code=409, detail="E-mail já cadastrado")
         raise HTTPException(status_code=500, detail=f"Erro ao salvar no banco de dados: {erro.message}")
 
     if not resposta.data:
