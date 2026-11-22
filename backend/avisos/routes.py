@@ -20,7 +20,7 @@ class AvisoAtualizacao(BaseModel):
 @router.get("/avisos", status_code=200)
 def listar_avisos():
     try:
-        resposta = supabase.table("avisos").select("*").order("criado_em", desc=True).execute()
+        resposta = supabase.table("avisos").select("*").execute()
 
         return resposta.data
 

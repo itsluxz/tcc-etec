@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import HTTPException, APIRouter, Query
+from fastapi import HTTPException, APIRouter
 from pydantic import BaseModel, Field
 from postgrest.exceptions import APIError
 from database import supabase
@@ -21,12 +21,9 @@ class AtendimentoAtualizacao(BaseModel):
 
 
 @router.get("/atendimentos", status_code=200)
-def listar_atendimentos(usuario_id: int | None = Query(default=None, gt=0)):
+def listar_atendimentos():
     try:
-        consulta = supabase.table("atendimentos").select("*")
-        if usuario_id is not None:
-            consulta = consulta.eq("usuario_id", usuario_id)
-        resposta = consulta.execute()
+        resposta = supabase.table("atendimentos").select("*").execute()
 
         return resposta.data
 
