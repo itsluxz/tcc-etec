@@ -6,29 +6,51 @@ from database import supabase
 
 router = APIRouter(tags=["notas"])
 
-# menções da ETEC, da menor para a maior
+#Notas Padrão ETEC, da menor para a maior
 Mencao = Literal["I", "R", "B", "MB"]
+MENCOES = ["I", "R", "B", "MB"]
 
-# traz o nome do aluno junto com a nota
-CAMPOS = "*, aluno:usuarios!aluno_id(nome)"
+#Nome do aluno, a turma e a disciplina junto com a nota
+CAMPOS = "*, aluno:usuarios!aluno_id(nome), turma:turmas(nome, ano), disciplina:disciplinas(nome)"
 
 class NotaEntrada(BaseModel):
     aluno_id: int
     professor_id: int
-    turma: str = Field(min_length=1, max_length=50)
-    disciplina: str = Field(min_length=1, max_length=100)
+    turma_id: int
+    disciplina_id: int
     bimestre: int = Field(ge=1, le=4)
-    mencao: Mencao
+    mencao_trabalho: Mencao
+    mencao_atividades: Mencao
+    mencao_prova: Mencao
     observacao: str | None = Field(default=None, min_length=1)
 
 class NotaAtualizacao(BaseModel):
     aluno_id: int | None = None
     professor_id: int | None = None
-    turma: str | None = Field(default=None, min_length=1, max_length=50)
-    disciplina: str | None = Field(default=None, min_length=1, max_length=100)
+    turma_id: int | None = None
+    disciplina_id: int | None = None
     bimestre: int | None = Field(default=None, ge=1, le=4)
-    mencao: Mencao | None = None
+    mencao_trabalho: Mencao | None = None
+    mencao_atividades: Mencao | None = None
+    mencao_prova: Mencao | None = None
     observacao: str | None = Field(default=None, min_length=1)
+
+
+# menção final = média das três: cada menção vira um número (I=1, R=2, B=3, MB=4),
+# tira a média, arredonda e volta para menção
+def calcular_mencao_final(nota):
+    valores = [
+        MENCOES.index(nota["mencao_trabalho"]) + 1,
+        MENCOES.index(nota["mencao_atividades"]) + 1,
+        MENCOES.index(nota["mencao_prova"]) + 1,
+    ]
+    media = sum(valores) / 3
+    return MENCOES[round(media) - 1]
+
+
+# devolve a nota com a menção final junto
+def nota_com_final(linha):
+    return {**linha, "mencao_final": calcular_mencao_final(linha)}
 
 
 def usuario_tem_tipo(usuario_id, tipos):
@@ -41,22 +63,38 @@ def usuario_tem_tipo(usuario_id, tipos):
     return bool(resposta.data)
 
 
-@router.get("/notas", status_code=200)
-def listar_notas(aluno_id: int | None = None, turma: str | None = None, disciplina: str | None = None, bimestre: int | None = None):
+def professor_da_aula(professor_id, disciplina_id):
     try:
-        # filtros opcionais, ex: /notas?aluno_id=3 ou /notas?turma=3A&bimestre=1
+        resposta = (
+            supabase.table("professor_disciplinas")
+            .select("professor_id")
+            .eq("professor_id", professor_id)
+            .eq("disciplina_id", disciplina_id)
+            .execute()
+        )
+
+    except APIError:
+        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
+
+    return bool(resposta.data)
+
+
+@router.get("/notas", status_code=200)
+def listar_notas(aluno_id: int | None = None, professor_id: int | None = None, turma_id: int | None = None, bimestre: int | None = None):
+    try:
+
         consulta = supabase.table("notas").select(CAMPOS)
         if aluno_id:
             consulta = consulta.eq("aluno_id", aluno_id)
-        if turma:
-            consulta = consulta.eq("turma", turma)
-        if disciplina:
-            consulta = consulta.eq("disciplina", disciplina)
+        if professor_id:
+            consulta = consulta.eq("professor_id", professor_id)
+        if turma_id:
+            consulta = consulta.eq("turma_id", turma_id)
         if bimestre:
             consulta = consulta.eq("bimestre", bimestre)
         resposta = consulta.execute()
 
-        return resposta.data
+        return [nota_com_final(linha) for linha in resposta.data]
 
     except APIError:
         raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
@@ -73,7 +111,7 @@ def buscar_nota(nota_id: int):
     if not resposta.data:
         raise HTTPException(status_code=404, detail="Nota não encontrada")
 
-    return resposta.data[0]
+    return nota_com_final(resposta.data[0])
 
 
 @router.post("/notas", status_code=201)
@@ -81,19 +119,26 @@ def criar_nota(dados: NotaEntrada):
     if not usuario_tem_tipo(dados.aluno_id, ["ALUNO"]):
         raise HTTPException(status_code=400, detail="Aluno não encontrado")
 
-    # só professores e gestores podem lançar notas
+    # Permissao apenas para professor e gestor
     if not usuario_tem_tipo(dados.professor_id, ["PROFESSOR", "GESTAO"]):
         raise HTTPException(status_code=400, detail="Apenas professores e gestores podem lançar notas")
+
+    # professor só lança nota das disciplinas que dá aula; gestão pode lançar de qualquer uma
+    if usuario_tem_tipo(dados.professor_id, ["PROFESSOR"]) and not professor_da_aula(dados.professor_id, dados.disciplina_id):
+        raise HTTPException(status_code=400, detail="Esse professor não dá aula dessa disciplina")
 
     try:
         resposta = supabase.table("notas").insert(dados.model_dump()).execute()
 
         return {
             "mensagem": "Nota lançada com sucesso",
-            **resposta.data[0],
+            **nota_com_final(resposta.data[0]),
         }
 
     except APIError as erro:
+        # o banco recusa uma segunda nota do mesmo aluno, na mesma disciplina e bimestre
+        if "notas_aluno_id_disciplina_id_bimestre_key" in (erro.message or ""):
+            raise HTTPException(status_code=409, detail="Esse aluno já tem nota nessa disciplina e bimestre")
         raise HTTPException(status_code=400, detail=f"Não foi possível lançar a nota: {erro.message}")
 
 
@@ -114,7 +159,7 @@ def atualizar_nota(nota_id: int, dados: NotaAtualizacao):
 
     return {
         "mensagem": "Nota atualizada com sucesso",
-        **resposta.data[0],
+        **nota_com_final(resposta.data[0]),
     }
 
 

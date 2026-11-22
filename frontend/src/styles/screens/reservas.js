@@ -1,8 +1,11 @@
 import { StyleSheet } from 'react-native';
 import { commonScreenStyles } from '../common';
+import { colors } from '../global';
 
 const ink = '#172441';
 const muted = '#71809B';
+const border = '#E5EBF3';
+export const reservasColors = { muted };
 
 export const reservasStyles = {
   ...commonScreenStyles,
@@ -54,5 +57,56 @@ export const reservasStyles = {
       backgroundColor: '#FFFFFF',
     },
     unavailableText: { color: muted, fontSize: 12, lineHeight: 17 },
+    // cartão de cada sala
+    salaCard: {
+      marginTop: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 16,
+      backgroundColor: '#FFFFFF',
+    },
+    salaHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+    salaTitle: { flex: 1 },
+    salaName: { color: ink, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+    salaType: { marginTop: 2, color: muted, fontSize: 11, lineHeight: 15 },
+    tag: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 8, overflow: 'hidden', fontSize: 10, fontWeight: '700' },
+    tagFree: { color: colors.success, backgroundColor: '#E4F7EA' },
+    tagBusy: { color: '#3264F5', backgroundColor: '#E8EEFF' },
+    tagOff: { color: muted, backgroundColor: '#F1F3F8' },
+    salaFree: { marginTop: 10, color: muted, fontSize: 12, lineHeight: 16 },
+    slot: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: border },
+    slotTime: { color: ink, fontSize: 13, fontWeight: '700' },
+    slotInfo: { marginTop: 2, color: muted, fontSize: 11, lineHeight: 15 },
+    slotActions: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 14 },
+    slotQuestion: { color: ink, fontSize: 11, fontWeight: '600' },
+    slotAction: { marginTop: 6, color: '#3264F5', fontSize: 12, fontWeight: '700' },
+    slotActionDanger: { color: colors.danger },
+    // formulário de nova reserva
+    formCard: {
+      marginTop: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 16,
+      backgroundColor: '#FFFFFF',
+    },
+    formLabel: { marginTop: 12, color: ink, fontSize: 12, lineHeight: 15, fontWeight: '700' },
+    formHint: { marginTop: 6, color: muted, fontSize: 12, lineHeight: 16 },
+    options: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    timeRow: { flexDirection: 'row', gap: 12 },
+    timeField: { flex: 1 },
+    input: {
+      height: 42,
+      marginTop: 6,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 11,
+      color: ink,
+      fontSize: 12,
+    },
+    formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    saveButton: { marginTop: 16 },
   }),
 };

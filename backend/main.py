@@ -10,6 +10,8 @@ from substituicoes.routes import router as substituicoes_router
 from atendimentos.routes import router as atendimentos_router
 from ocorrencias.routes import router as ocorrencias_router
 from notas.routes import router as notas_router
+from turmas.routes import router as turmas_router
+from disciplinas.routes import router as disciplinas_router
 
 app = FastAPI(title="TCC-ETEC-API")
 
@@ -35,3 +37,5 @@ app.include_router(substituicoes_router)
 app.include_router(atendimentos_router)
 app.include_router(ocorrencias_router)
 app.include_router(notas_router)
+app.include_router(turmas_router)
+app.include_router(disciplinas_router)

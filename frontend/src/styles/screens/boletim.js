@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { commonScreenStyles } from '../common';
+import { colors } from '../global';
 
 const ink = '#172441';
 const muted = '#71809B';
@@ -7,6 +8,22 @@ const border = '#E5EBF3';
 const card = '#FFFFFF';
 const surface = '#F5F7FC';
 export const boletimColors = { muted };
+
+// cor de cada menção, da menor (I) para a maior (MB)
+const mencaoColors = {
+  I: colors.danger,
+  R: colors.warning,
+  B: colors.info,
+  MB: colors.success,
+};
+
+export const createMencaoStyle = (mencao) => {
+  const color = mencaoColors[mencao] ?? muted;
+  return {
+    pill: { backgroundColor: `${color}1A` },
+    text: { color },
+  };
+};
 
 export const boletimStyles = {
   ...commonScreenStyles,
@@ -38,5 +55,65 @@ export const boletimStyles = {
     errorCard: { borderColor: '#F9CBCB', backgroundColor: '#FFF7F7' },
     errorTitle: { color: ink, fontSize: 16, lineHeight: 20, fontWeight: '700' },
     stateText: { marginTop: 8, color: muted, fontSize: 12, lineHeight: 17, textAlign: 'center' },
+    legend: { marginTop: 12, color: muted, fontSize: 11, lineHeight: 15 },
+    subjectCard: {
+      marginTop: 12,
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+    },
+    subjectName: { color: ink, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+    subjectMeta: { marginTop: 2, color: muted, fontSize: 11, lineHeight: 15 },
+    bimestres: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' },
+    bimestre: { flex: 1, alignItems: 'center' },
+    bimestreLabel: { color: muted, fontSize: 10, lineHeight: 13 },
+    mencaoPill: {
+      minWidth: 40,
+      marginTop: 5,
+      paddingVertical: 5,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    mencaoText: { fontSize: 13, fontWeight: '700' },
+    addButton: { marginTop: 14 },
+    formCard: {
+      marginTop: 12,
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+    },
+    formLabel: { marginTop: 12, color: ink, fontSize: 12, lineHeight: 15, fontWeight: '700' },
+    options: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    option: {
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: surface,
+    },
+    optionActive: { borderColor: '#3264F5', backgroundColor: '#3264F5' },
+    optionText: { color: muted, fontSize: 12, fontWeight: '600' },
+    optionTextActive: { color: '#FFFFFF' },
+    formHint: { marginTop: 6, color: muted, fontSize: 12, lineHeight: 16 },
+    formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    saveButton: { marginTop: 16 },
+    // cartão de nota do professor (NotaCard)
+    cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
+    cardTitle: { flex: 1 },
+    menu: { marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: surface },
+    menuRow: { flexDirection: 'row', gap: 20 },
+    menuQuestion: { marginBottom: 8, color: ink, fontSize: 12, fontWeight: '600' },
+    menuItem: { color: '#3264F5', fontSize: 13, fontWeight: '700' },
+    menuItemDanger: { color: colors.danger },
+    finalLabel: { color: ink, fontWeight: '700' },
+    editButtons: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    editSaveButton: { flex: 1 },
+    editCancel: { color: muted, fontSize: 13, fontWeight: '700' },
   }),
 };

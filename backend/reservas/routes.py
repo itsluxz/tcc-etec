@@ -7,6 +7,9 @@ from database import supabase
 
 router = APIRouter(tags=["reservas"])
 
+# traz a sala e quem reservou junto com a reserva
+CAMPOS = "*, sala:salas(nome, tipo), usuario:usuarios(nome)"
+
 class ReservaEntrada(BaseModel):
     sala_id: int
     usuario_id: int
@@ -26,10 +29,37 @@ class ReservaAtualizacao(BaseModel):
     status: str | None = Field(default=None, min_length=1, max_length=30)
 
 
-@router.get("/reservas", status_code=200)
-def listar_reservas():
+# outra reserva da mesma sala, no mesmo dia, com horário que se cruza com o novo
+def sala_ocupada(sala_id, data, inicio, fim):
     try:
-        resposta = supabase.table("reservas").select("*").execute()
+        resposta = (
+            supabase.table("reservas")
+            .select("id")
+            .eq("sala_id", sala_id)
+            .eq("data", data.isoformat())
+            .lt("horario_inicio", fim.isoformat())
+            .gt("horario_fim", inicio.isoformat())
+            .execute()
+        )
+
+    except APIError:
+        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
+
+    return bool(resposta.data)
+
+
+@router.get("/reservas", status_code=200)
+def listar_reservas(data: date | None = None, sala_id: int | None = None, usuario_id: int | None = None):
+    try:
+        # filtros opcionais, ex: /reservas?data=2026-11-12 ou /reservas?usuario_id=14
+        consulta = supabase.table("reservas").select(CAMPOS).order("horario_inicio")
+        if data:
+            consulta = consulta.eq("data", data.isoformat())
+        if sala_id:
+            consulta = consulta.eq("sala_id", sala_id)
+        if usuario_id:
+            consulta = consulta.eq("usuario_id", usuario_id)
+        resposta = consulta.execute()
 
         return resposta.data
 
@@ -40,7 +70,7 @@ def listar_reservas():
 @router.get("/reservas/{reserva_id}", status_code=200)
 def buscar_reserva(reserva_id: int):
     try:
-        resposta = supabase.table("reservas").select("*").eq("id", reserva_id).execute()
+        resposta = supabase.table("reservas").select(CAMPOS).eq("id", reserva_id).execute()
 
     except APIError:
         raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
@@ -65,6 +95,9 @@ def criar_reserva(dados: ReservaEntrada):
 
     if not usuario.data:
         raise HTTPException(status_code=400, detail="Apenas professores e gestores podem reservar salas")
+
+    if sala_ocupada(dados.sala_id, dados.data, dados.horario_inicio, dados.horario_fim):
+        raise HTTPException(status_code=409, detail="Essa sala já está reservada nesse horário")
 
     try:
         resposta = supabase.table("reservas").insert(dados.model_dump(mode="json")).execute()

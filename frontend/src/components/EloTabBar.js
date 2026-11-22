@@ -38,22 +38,8 @@ const studentTabs = [
   },
 ];
 
-const professorTabs = [
-  {
-    name: 'Início', route: 'Início',
-    inactiveIcon: require('../../assets/elo-tab-home-inactive.png'),
-  },
-  {
-    name: 'Reservas', route: 'Reservas',
-    activeIcon: require('../../assets/elo-reservas-flask-blue.png'),
-    inactiveIcon: require('../../assets/elo-reservas-flask-blue.png'),
-  },
-  {
-    name: 'Ajuda', route: 'Ajuda',
-    activeIcon: require('../../assets/elo-help-tab-active.png'),
-    inactiveIcon: require('../../assets/elo-home-tab-help.png'),
-  },
-];
+// professor vê todas as abas, menos a merenda
+const professorTabs = studentTabs.filter((tab) => tab.name !== 'Merenda');
 
 export default function EloTabBar({ active, navigation, variant = 'student' }) {
   const tabs = variant === 'professor' ? professorTabs : studentTabs;
