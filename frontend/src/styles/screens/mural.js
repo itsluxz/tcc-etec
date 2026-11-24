@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { commonScreenStyles } from '../common';
+import { colors } from '../global';
 
 const ink = '#172441';
 const muted = '#71809B';
@@ -34,7 +35,9 @@ export const muralStyles = {
     eventsFilter: { width: 71 },
     filterText: { color: muted, fontSize: 10, fontWeight: '700' },
     allFilterText: { color: '#3264F5' },
-    featured: { minHeight: 201, marginTop: 17, borderRadius: 18, overflow: 'hidden' },
+    featured: { minHeight: 201, marginTop: 17, borderRadius: 18, overflow: 'hidden', backgroundColor: '#2346C4' },
+    // o padding fica no conteúdo, para não empurrar o fundo absoluto
+    featuredContent: { padding: 17 },
     featuredImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: 201 },
     featuredCircle: {
       position: 'absolute',
@@ -90,5 +93,120 @@ export const muralStyles = {
       backgroundColor: '#FFFFFF',
     },
     unavailableText: { color: muted, fontSize: 12, lineHeight: 17 },
+    // título com o botão + (professor e gestão)
+    titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+    titleCopy: { flex: 1 },
+    addButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#3264F5',
+    },
+    addButtonPressed: { opacity: 0.8 },
+    // modal de novo aviso
+    modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(23, 36, 65, 0.45)' },
+    modalDismiss: { flex: 1 },
+    modalSheet: {
+      maxHeight: '85%',
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 28,
+      borderTopLeftRadius: 22,
+      borderTopRightRadius: 22,
+      backgroundColor: '#FFFFFF',
+    },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    modalTitle: { color: ink, fontSize: 18, lineHeight: 23, fontWeight: '700' },
+    formLabel: { marginTop: 14, color: ink, fontSize: 12, lineHeight: 15, fontWeight: '700' },
+    input: {
+      height: 44,
+      marginTop: 6,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: '#E5EBF3',
+      borderRadius: 11,
+      color: ink,
+      fontSize: 13,
+    },
+    textArea: { height: 130, paddingTop: 10 },
+    formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    publishButton: { marginTop: 18 },
+    formHint: { marginTop: 6, color: muted, fontSize: 11, lineHeight: 15 },
+    // opções de expiração
+    chips: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    chip: {
+      height: 30,
+      paddingHorizontal: 12,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: '#E5EBF3',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFFFFF',
+    },
+    chipSelected: { borderColor: '#3264F5', backgroundColor: '#3264F5' },
+    chipText: { color: muted, fontSize: 11, fontWeight: '700' },
+    chipTextSelected: { color: '#FFFFFF' },
+    // imagens escolhidas no formulário
+    imagePicker: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    thumb: { width: 76, height: 76 },
+    thumbImage: { width: 76, height: 76, borderRadius: 11, backgroundColor: '#E5EBF3' },
+    thumbRemove: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#172441',
+    },
+    addImage: {
+      width: 76,
+      height: 76,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: '#3264F5',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#F5F7FC',
+    },
+    addImageText: { marginTop: 3, color: '#3264F5', fontSize: 10, fontWeight: '700' },
+    // imagens nos avisos
+    // cartão azul em fluxo normal: cresce com o texto e as imagens
+    // fundo preso nas 4 bordas (sem height em %, que não funciona quando a altura depende do conteúdo)
+    featuredBackground: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+    featuredBadgeInline: {
+      alignSelf: 'flex-start',
+      height: 25,
+      paddingHorizontal: 16,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    featuredHeading: { marginTop: 17, color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700' },
+    featuredMeta: { marginTop: 8, color: '#E5ECFF', fontSize: 12, lineHeight: 15 },
+    featuredText: { marginTop: 8, color: '#E5ECFF', fontSize: 13, lineHeight: 19 },
+    featuredImages: { marginTop: 14, padding: 8, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)' },
+    featuredNav: { marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    navButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.22)',
+    },
+    navButtonDisabled: { opacity: 0.35 },
+    navCounter: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
+    noticeImagesWrap: { marginBottom: 12 },
+    noticeImages: { gap: 8 },
+    noticeImage: { width: 200, height: 220, borderRadius: 11, backgroundColor: '#EEF2F8' },
+    noticeImageSingle: { width: '100%', height: 260 },
   }),
 };

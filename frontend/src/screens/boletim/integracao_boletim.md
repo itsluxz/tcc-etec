@@ -359,3 +359,45 @@ const { data } = await authenticationApi.login({ email: email.trim(), senha: pas
 ```
 
 O usuário também passou a ir como `user` (antes `usuario`), que é o nome que o `MainTabs` e a `HomeScreen` já liam.
+
+---
+
+## Uma menção por vez
+
+Antes, o formulário exigia as três menções (trabalho, atividades e prova) juntas. Agora o professor escolhe **um tipo de menção** e o valor, marca quantos alunos quiser e salva. As outras menções ficam para depois.
+
+Exemplo: no 3º bimestre de Biologia, marcar dois alunos, escolher **Trabalho** e **B**, salvar. Na semana seguinte, marcar os mesmos alunos, escolher **Prova** e lançar a menção da prova.
+
+### Banco
+
+As três colunas de menção passam a aceitar vazio. Script em `backend/banco_dados/notas_mencoes_opcionais.sql`:
+
+```sql
+alter table notas alter column mencao_trabalho drop not null;
+alter table notas alter column mencao_atividades drop not null;
+alter table notas alter column mencao_prova drop not null;
+```
+
+O `check (... in ('I', 'R', 'B', 'MB'))` continua valendo quando a menção é preenchida.
+
+### `POST /notas`
+
+- As três menções são opcionais, mas é preciso mandar pelo menos uma ("Escolha pelo menos uma menção").
+- Se o aluno **ainda não tem** nota naquela disciplina e bimestre, a nota é criada só com a menção enviada (201 "Nota lançada com sucesso").
+- Se ele **já tem**, a menção enviada é adicionada à nota que existe (200 "Menção adicionada à nota"). Antes isso dava 409.
+- Se a menção enviada **já estava lançada**, a API recusa (409 "Esse aluno já tem menção de trabalho nesse bimestre"). Para trocar uma menção já lançada, use o **Editar** do cartão.
+
+```js
+await notasApi.create({
+  aluno_id: alunoId,
+  professor_id: user.id,
+  turma_id: turmaId,
+  disciplina_id: disciplinaId,
+  bimestre,
+  [tipoMencao]: mencao, // ex: { mencao_trabalho: 'B' }
+});
+```
+
+### Menção final
+
+A `mencao_final` só é calculada quando as três menções estão preenchidas. Enquanto faltar alguma, ela vem `null` e o cartão mostra `—`. No cartão do professor, as menções que faltam também aparecem como `—`, e o **Editar** permite preenchê-las.

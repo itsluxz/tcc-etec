@@ -1,8 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { commonScreenStyles } from '../common';
+import { colors } from '../global';
 
 const ink = '#172441';
 const muted = '#71809B';
+const border = '#E5EBF3';
 export const cantinaColors = { ink, muted, blue: '#3264F5', green: '#16A896' };
 
 export const cantinaStyles = {
@@ -85,27 +87,6 @@ export const cantinaStyles = {
     itemLabel: { color: muted, fontSize: 9, lineHeight: 11, fontWeight: '700' },
     itemValue: { flex: 1, marginTop: 6, color: ink, fontSize: 12, lineHeight: 17 },
     menuDescription: { flex: 1 },
-    allergyCard: {
-      minHeight: 98,
-      marginTop: 15,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 12,
-      borderRadius: 14,
-      backgroundColor: '#FFF2DF',
-    },
-    allergyTitle: { color: ink, fontSize: 14, lineHeight: 17, fontWeight: '700' },
-    allergyTags: { marginTop: 10, flexDirection: 'row', gap: 7 },
-    allergyTag: {
-      height: 24,
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#FFFFFF',
-    },
-    allergyTagText: { color: '#D48B2D', fontSize: 10, lineHeight: 12, fontWeight: '700' },
-    allergyNote: { marginTop: 8, color: muted, fontSize: 11, lineHeight: 13 },
     footnote: { marginTop: 24, color: muted, fontSize: 10, lineHeight: 13 },
     stateText: { marginTop: 10, color: muted, fontSize: 12, lineHeight: 17 },
     stateCard: {
@@ -116,6 +97,86 @@ export const cantinaStyles = {
       borderWidth: 1,
       borderColor: '#E5EBF3',
     },
+    // "Comerá hoje?" (aluno) e contagem de respostas (gestão)
+    answerCard: {
+      marginTop: 10,
+      padding: 13,
+      borderRadius: 13,
+      backgroundColor: '#E8EEFF',
+    },
+    answerQuestion: { color: ink, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+    answerOptions: { marginTop: 10, flexDirection: 'row', gap: 10 },
+    answerButton: {
+      flex: 1,
+      height: 42,
+      borderWidth: 1,
+      borderColor: '#C9D6FB',
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFFFFF',
+    },
+    answerButtonSelected: { borderColor: '#3264F5', backgroundColor: '#3264F5' },
+    answerButtonText: { color: '#3264F5', fontSize: 13, fontWeight: '700' },
+    answerButtonTextSelected: { color: '#FFFFFF' },
+    answerHint: { marginTop: 8, color: muted, fontSize: 11, lineHeight: 15 },
+    answerCount: { marginTop: 6, color: '#3264F5', fontSize: 26, lineHeight: 31, fontWeight: '700' },
+    answerLoading: { marginTop: 10, alignSelf: 'flex-start' },
+    // ações da gestão: novo cardápio, editar e excluir
+    newMenuButton: { marginTop: 16 },
+    menuActions: {
+      marginTop: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    menuQuestion: { color: ink, fontSize: 12, fontWeight: '600' },
+    menuAction: { color: '#3264F5', fontSize: 12, fontWeight: '700' },
+    menuActionDanger: { color: colors.danger },
+    // formulário de novo cardápio / edição
+    formCard: {
+      marginTop: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 16,
+      backgroundColor: '#FFFFFF',
+    },
+    formTitle: { color: ink, fontSize: 15, lineHeight: 19, fontWeight: '700' },
+    formLabel: { marginTop: 12, color: ink, fontSize: 12, lineHeight: 15, fontWeight: '700' },
+    input: {
+      height: 42,
+      marginTop: 6,
+      paddingHorizontal: 12,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 11,
+      color: ink,
+      fontSize: 12,
+    },
+    textArea: { height: 96, paddingTop: 10 },
+    // botões dos 7 dias no formulário
+    formDays: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    formDay: {
+      flexGrow: 1,
+      flexBasis: 38,
+      minHeight: 54,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 11,
+      backgroundColor: '#FFFFFF',
+    },
+    // dia que já tem cardápio: fica cinza, mas ainda pode ser tocado (a tela avisa ao salvar)
+    formDayBusy: { backgroundColor: '#F1F3F8' },
+    formDayDate: { marginTop: 4, color: ink, fontSize: 16, lineHeight: 19, fontWeight: '700' },
+    formHint: { marginTop: 8, color: muted, fontSize: 11, lineHeight: 14 },
+    formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    saveButton: { marginTop: 16 },
   }),
 };
 

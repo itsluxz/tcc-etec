@@ -42,6 +42,34 @@ function periodoDaReserva(reserva) {
   return 'Noite';
 }
 
+// opções de repetição: quantas semanas seguidas, contando a primeira
+const opcoesRepeticao = [
+  { label: 'Não repete', semanas: 1 },
+  { label: '4 semanas', semanas: 4 },
+  { label: '8 semanas', semanas: 8 },
+  { label: '12 semanas', semanas: 12 },
+  { label: '6 meses', semanas: 26 },
+];
+
+// "2026-11-20" + 7 dias -> "2026-11-27"
+function somarDias(data, dias) {
+  const dia = new Date(`${data}T12:00:00`);
+  dia.setDate(dia.getDate() + dias);
+  return dateKey(dia);
+}
+
+// "2026-11-20" -> "20/11/2026"
+function formatarData(data) {
+  const [year, month, day] = data.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+// "Toda sexta-feira" / "Todo sábado" (sábado e domingo são masculinos)
+function todaSemana(data) {
+  const dia = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(new Date(`${data}T12:00:00`));
+  return `${dia === 'sábado' || dia === 'domingo' ? 'Todo' : 'Toda'} ${dia}`;
+}
+
 function horaValida(texto) {
   return /^\d{2}:\d{2}$/.test(texto);
 }
@@ -60,6 +88,7 @@ export default function ReservasScreen({ navigation, route }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [actionError, setActionError] = useState('');
   const [confirmCancelId, setConfirmCancelId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // formulário de nova reserva (só professor e gestão)
   const [showForm, setShowForm] = useState(false);
@@ -68,6 +97,8 @@ export default function ReservasScreen({ navigation, route }) {
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
   const [finalidade, setFinalidade] = useState('');
+  // 1 = só esse dia; mais que 1 = repete toda semana, no mesmo dia da semana
+  const [semanas, setSemanas] = useState(1);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -102,6 +133,7 @@ export default function ReservasScreen({ navigation, route }) {
     setInicio('');
     setFim('');
     setFinalidade('');
+    setSemanas(1);
     setFormError('');
   }
 
@@ -117,16 +149,20 @@ export default function ReservasScreen({ navigation, route }) {
 
     setSaving(true);
     setFormError('');
+    setSuccessMessage('');
 
     try {
-      await reservasApi.create({
+      const { data } = await reservasApi.create({
         sala_id: salaId,
         usuario_id: user.id,
         data: formDate,
         horario_inicio: inicio,
         horario_fim: fim,
         finalidade: finalidade.trim() || undefined,
+        // última semana da série; a API cria uma reserva por semana até ela
+        repetir_ate: semanas > 1 ? somarDias(formDate, (semanas - 1) * 7) : undefined,
       });
+      if (data.recorrencia_id) setSuccessMessage(data.mensagem);
       closeForm();
 
       // mostra o dia da reserva nova; se já for o dia na tela, só recarrega
@@ -142,8 +178,23 @@ export default function ReservasScreen({ navigation, route }) {
     }
   }
 
+  // reserva recorrente: cancela esta semana e todas as seguintes da série
+  async function handleCancelSerie(reserva) {
+    setActionError('');
+    setSuccessMessage('');
+    try {
+      const { data } = await reservasApi.removeSerie(reserva.recorrencia_id, reserva.data);
+      setConfirmCancelId(null);
+      setSuccessMessage(data.mensagem);
+      loadDados();
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Não foi possível cancelar as reservas.'));
+    }
+  }
+
   async function handleCancel(reservaId) {
     setActionError('');
+    setSuccessMessage('');
     try {
       await reservasApi.remove(reservaId);
       setConfirmCancelId(null);
@@ -245,6 +296,26 @@ export default function ReservasScreen({ navigation, route }) {
               </View>
             </View>
 
+            <Text style={styles.formLabel}>Repetir toda semana</Text>
+            <View style={styles.options}>
+              {opcoesRepeticao.map((opcao) => (
+                <Pressable
+                  key={opcao.label}
+                  style={[styles.period, semanas === opcao.semanas && styles.selectedPeriod]}
+                  onPress={() => setSemanas(opcao.semanas)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: semanas === opcao.semanas }}
+                >
+                  <Text style={[styles.periodText, semanas === opcao.semanas && styles.selectedPeriodText]}>{opcao.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.formHint}>
+              {semanas > 1
+                ? `${todaSemana(formDate)}${horaValida(inicio) && horaValida(fim) ? `, das ${inicio} às ${fim}` : ''}, até ${formatarData(somarDias(formDate, (semanas - 1) * 7))} (${semanas} reservas).`
+                : 'Reserva só para o dia escolhido.'}
+            </Text>
+
             <Text style={styles.formLabel}>Finalidade (opcional)</Text>
             <TextInput
               value={finalidade}
@@ -263,7 +334,7 @@ export default function ReservasScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityState={{ disabled: saving }}
             >
-              <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : 'Reservar'}</Text>
+              <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : semanas > 1 ? `Reservar ${semanas} semanas` : 'Reservar'}</Text>
             </Pressable>
           </View>
         )}
@@ -302,6 +373,7 @@ export default function ReservasScreen({ navigation, route }) {
         </View>
 
         {actionError ? <Text style={styles.formError}>{actionError}</Text> : null}
+        {successMessage ? <Text style={styles.formSuccess}>{successMessage}</Text> : null}
 
         {loading ? (
           <View style={styles.unavailable}>
@@ -348,19 +420,38 @@ export default function ReservasScreen({ navigation, route }) {
                         {reserva.usuario?.nome}
                         {reserva.finalidade ? ` · ${reserva.finalidade}` : ''}
                       </Text>
+                      {reserva.recorrencia_id ? <Text style={styles.slotRepeat}>↻ {todaSemana(reserva.data)}</Text> : null}
 
                       {/* só quem reservou pode cancelar */}
                       {reserva.usuario_id === user?.id &&
                         (confirmCancelId === reserva.id ? (
-                          <View style={styles.slotActions}>
-                            <Text style={styles.slotQuestion}>Cancelar esta reserva?</Text>
-                            <Pressable onPress={() => setConfirmCancelId(null)}>
-                              <Text style={styles.slotAction}>Não</Text>
-                            </Pressable>
-                            <Pressable onPress={() => handleCancel(reserva.id)}>
-                              <Text style={[styles.slotAction, styles.slotActionDanger]}>Sim</Text>
-                            </Pressable>
-                          </View>
+                          reserva.recorrencia_id ? (
+                            // série semanal: cancela só este dia ou este e os próximos
+                            <View>
+                              <Text style={[styles.slotQuestion, styles.slotQuestionBlock]}>Cancelar qual reserva?</Text>
+                              <View style={styles.slotActions}>
+                                <Pressable onPress={() => setConfirmCancelId(null)}>
+                                  <Text style={styles.slotAction}>Não</Text>
+                                </Pressable>
+                                <Pressable onPress={() => handleCancel(reserva.id)}>
+                                  <Text style={[styles.slotAction, styles.slotActionDanger]}>Só esta</Text>
+                                </Pressable>
+                                <Pressable onPress={() => handleCancelSerie(reserva)}>
+                                  <Text style={[styles.slotAction, styles.slotActionDanger]}>Esta e as próximas</Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          ) : (
+                            <View style={styles.slotActions}>
+                              <Text style={styles.slotQuestion}>Cancelar esta reserva?</Text>
+                              <Pressable onPress={() => setConfirmCancelId(null)}>
+                                <Text style={styles.slotAction}>Não</Text>
+                              </Pressable>
+                              <Pressable onPress={() => handleCancel(reserva.id)}>
+                                <Text style={[styles.slotAction, styles.slotActionDanger]}>Sim</Text>
+                              </Pressable>
+                            </View>
+                          )
                         ) : (
                           <Pressable onPress={() => setConfirmCancelId(reserva.id)}>
                             <Text style={[styles.slotAction, styles.slotActionDanger]}>Cancelar</Text>

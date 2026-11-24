@@ -236,6 +236,56 @@ export const tagStyles = StyleSheet.create({
   },
 });
 
+// campo de seleção (components/Select.js)
+export const selectColors = { muted: '#71809B', primary: '#3264F5' };
+
+export const selectStyles = StyleSheet.create({
+  field: {
+    height: 44,
+    marginTop: 6,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5EBF3',
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+  },
+  fieldOpen: { borderColor: '#3264F5' },
+  fieldDisabled: { opacity: 0.5 },
+  fieldText: { flex: 1, color: '#172441', fontSize: 13 },
+  placeholder: { color: '#71809B' },
+  list: {
+    maxHeight: 260,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E5EBF3',
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  item: {
+    minHeight: 42,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F3F8',
+  },
+  itemSelected: { backgroundColor: '#E8EEFF' },
+  itemText: { flex: 1, color: '#172441', fontSize: 13 },
+  itemTextSelected: { color: '#3264F5', fontWeight: '700' },
+  itemAll: { minHeight: 38 },
+  itemAllText: { color: '#3264F5', fontSize: 12, fontWeight: '700' },
+  empty: { padding: 12, color: '#71809B', fontSize: 12, lineHeight: 16 },
+  done: { height: 40, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#E5EBF3' },
+  doneText: { color: '#3264F5', fontSize: 13, fontWeight: '700' },
+});
+
 export const createAvatarContainerStyle = (size, backgroundColor) => ({
   width: size,
   height: size,

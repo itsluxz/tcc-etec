@@ -1,12 +1,12 @@
 from typing import Literal
-from fastapi import HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter, Response
 from pydantic import BaseModel, Field
 from postgrest.exceptions import APIError
 from database import supabase
 
 router = APIRouter(tags=["notas"])
 
-#Notas Padrão ETEC, da menor para a maior
+#Notas Padrão ETEC
 Mencao = Literal["I", "R", "B", "MB"]
 MENCOES = ["I", "R", "B", "MB"]
 
@@ -19,9 +19,10 @@ class NotaEntrada(BaseModel):
     turma_id: int
     disciplina_id: int
     bimestre: int = Field(ge=1, le=4)
-    mencao_trabalho: Mencao
-    mencao_atividades: Mencao
-    mencao_prova: Mencao
+    # dá para lançar uma menção por vez: as que faltarem são lançadas depois
+    mencao_trabalho: Mencao | None = None
+    mencao_atividades: Mencao | None = None
+    mencao_prova: Mencao | None = None
     observacao: str | None = Field(default=None, min_length=1)
 
 class NotaAtualizacao(BaseModel):
@@ -36,14 +37,17 @@ class NotaAtualizacao(BaseModel):
     observacao: str | None = Field(default=None, min_length=1)
 
 
+CAMPOS_MENCAO = ["mencao_trabalho", "mencao_atividades", "mencao_prova"]
+
+
 # menção final = média das três: cada menção vira um número (I=1, R=2, B=3, MB=4),
 # tira a média, arredonda e volta para menção
+# enquanto faltar alguma das três, a final fica vazia (None)
 def calcular_mencao_final(nota):
-    valores = [
-        MENCOES.index(nota["mencao_trabalho"]) + 1,
-        MENCOES.index(nota["mencao_atividades"]) + 1,
-        MENCOES.index(nota["mencao_prova"]) + 1,
-    ]
+    if any(not nota.get(campo) for campo in CAMPOS_MENCAO):
+        return None
+
+    valores = [MENCOES.index(nota[campo]) + 1 for campo in CAMPOS_MENCAO]
     media = sum(valores) / 3
     return MENCOES[round(media) - 1]
 
@@ -61,6 +65,27 @@ def usuario_tem_tipo(usuario_id, tipos):
         raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
 
     return bool(resposta.data)
+
+
+NOMES_MENCAO = {"mencao_trabalho": "trabalho", "mencao_atividades": "atividades", "mencao_prova": "prova"}
+
+
+# a nota do aluno naquela disciplina e bimestre (só pode existir uma)
+def buscar_nota_do_bimestre(aluno_id, disciplina_id, bimestre):
+    try:
+        resposta = (
+            supabase.table("notas")
+            .select("*")
+            .eq("aluno_id", aluno_id)
+            .eq("disciplina_id", disciplina_id)
+            .eq("bimestre", bimestre)
+            .execute()
+        )
+
+    except APIError:
+        raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
+
+    return resposta.data[0] if resposta.data else None
 
 
 def professor_da_aula(professor_id, disciplina_id):
@@ -114,8 +139,14 @@ def buscar_nota(nota_id: int):
     return nota_com_final(resposta.data[0])
 
 
+# lança menções: se o aluno ainda não tem nota nessa disciplina e bimestre, cria;
+# se já tem, completa só as menções que ainda estavam vazias
 @router.post("/notas", status_code=201)
-def criar_nota(dados: NotaEntrada):
+def criar_nota(dados: NotaEntrada, response: Response):
+    novas_mencoes = {campo: valor for campo, valor in dados.model_dump().items() if campo in CAMPOS_MENCAO and valor}
+    if not novas_mencoes:
+        raise HTTPException(status_code=400, detail="Escolha pelo menos uma menção")
+
     if not usuario_tem_tipo(dados.aluno_id, ["ALUNO"]):
         raise HTTPException(status_code=400, detail="Aluno não encontrado")
 
@@ -127,8 +158,29 @@ def criar_nota(dados: NotaEntrada):
     if usuario_tem_tipo(dados.professor_id, ["PROFESSOR"]) and not professor_da_aula(dados.professor_id, dados.disciplina_id):
         raise HTTPException(status_code=400, detail="Esse professor não dá aula dessa disciplina")
 
+    existente = buscar_nota_do_bimestre(dados.aluno_id, dados.disciplina_id, dados.bimestre)
+
+    if existente:
+        # não sobrescreve menção já lançada; para trocar, use o Editar (PUT /notas/{id})
+        ja_lancadas = [campo for campo in novas_mencoes if existente.get(campo)]
+        if ja_lancadas:
+            nomes = ", ".join(NOMES_MENCAO[campo] for campo in ja_lancadas)
+            raise HTTPException(status_code=409, detail=f"Esse aluno já tem menção de {nomes} nesse bimestre")
+
+        try:
+            resposta = supabase.table("notas").update(novas_mencoes).eq("id", existente["id"]).execute()
+
+        except APIError as erro:
+            raise HTTPException(status_code=500, detail=f"Erro ao salvar no banco de dados: {erro.message}")
+
+        response.status_code = 200
+        return {
+            "mensagem": "Menção adicionada à nota",
+            **nota_com_final(resposta.data[0]),
+        }
+
     try:
-        resposta = supabase.table("notas").insert(dados.model_dump()).execute()
+        resposta = supabase.table("notas").insert(dados.model_dump(exclude_none=True)).execute()
 
         return {
             "mensagem": "Nota lançada com sucesso",
@@ -136,9 +188,6 @@ def criar_nota(dados: NotaEntrada):
         }
 
     except APIError as erro:
-        # o banco recusa uma segunda nota do mesmo aluno, na mesma disciplina e bimestre
-        if "notas_aluno_id_disciplina_id_bimestre_key" in (erro.message or ""):
-            raise HTTPException(status_code=409, detail="Esse aluno já tem nota nessa disciplina e bimestre")
         raise HTTPException(status_code=400, detail=f"Não foi possível lançar a nota: {erro.message}")
 
 

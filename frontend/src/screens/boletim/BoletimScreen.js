@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import EloTabBar from '../../components/EloTabBar';
+import Select from '../../components/Select';
 import { disciplinasApi, notasApi, turmasApi, usuariosApi } from '../../services/endpoints';
 import { getApiErrorMessage } from '../../services/errors';
 import { contentTopStyle, primaryButtonStyles } from '../../styles/common';
 import { boletimColors, createMencaoStyle, boletimStyles as styles } from '../../styles/screens/boletim';
 import MencaoOptions, { tiposMencao } from './MencaoOptions';
 import NotaCard from './NotaCard';
+import NotaModal from './NotaModal';
 
 const bimestres = [1, 2, 3, 4];
 
@@ -25,9 +28,11 @@ function agruparPorDisciplina(notas) {
         aluno: nota.aluno?.nome,
         turma: nota.turma?.nome,
         mencoes: {},
+        notas: {}, // a nota completa de cada bimestre, para o modal
       };
     }
     linhas[chave].mencoes[nota.bimestre] = nota.mencao_final;
+    linhas[chave].notas[nota.bimestre] = nota;
   });
 
   return Object.values(linhas);
@@ -44,6 +49,9 @@ export default function BoletimScreen({ navigation, route }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [search, setSearch] = useState('');
 
+  // cartão aberto no modal: { notaId } no professor, { chave } no aluno e na gestão
+  const [aberto, setAberto] = useState(null);
+
   // formulário de nova nota (só professor e gestão)
   const [showForm, setShowForm] = useState(false);
   const [turmas, setTurmas] = useState([]);
@@ -53,7 +61,9 @@ export default function BoletimScreen({ navigation, route }) {
   const [disciplinas, setDisciplinas] = useState([]);
   const [disciplinaId, setDisciplinaId] = useState(null);
   const [bimestre, setBimestre] = useState(null);
-  const [mencoesForm, setMencoesForm] = useState({});
+  // uma menção por vez: o tipo (trabalho, atividades ou prova) e o valor (I, R, B, MB)
+  const [tipoMencao, setTipoMencao] = useState(null);
+  const [mencao, setMencao] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -104,15 +114,6 @@ export default function BoletimScreen({ navigation, route }) {
     }
   }
 
-  // marca ou desmarca o aluno (dá para escolher vários)
-  function toggleAluno(id) {
-    if (alunoIds.includes(id)) {
-      setAlunoIds(alunoIds.filter((item) => item !== id));
-    } else {
-      setAlunoIds([...alunoIds, id]);
-    }
-  }
-
   function closeForm() {
     setShowForm(false);
     setTurmaId(null);
@@ -120,14 +121,13 @@ export default function BoletimScreen({ navigation, route }) {
     setAlunoIds([]);
     setDisciplinaId(null);
     setBimestre(null);
-    setMencoesForm({});
+    setTipoMencao(null);
+    setMencao(null);
     setFormError('');
   }
 
   async function handleSave() {
-    const faltaMencao = tiposMencao.some((tipo) => !mencoesForm[tipo.campo]);
-
-    if (!turmaId || alunoIds.length === 0 || !disciplinaId || !bimestre || faltaMencao) {
+    if (!turmaId || alunoIds.length === 0 || !disciplinaId || !bimestre || !tipoMencao || !mencao) {
       setFormError('Preencha todos os campos.');
       return;
     }
@@ -147,7 +147,8 @@ export default function BoletimScreen({ navigation, route }) {
           turma_id: turmaId,
           disciplina_id: disciplinaId,
           bimestre,
-          ...mencoesForm, // mencao_trabalho, mencao_atividades e mencao_prova
+          // só a menção escolhida, ex: { mencao_trabalho: 'B' }; as outras são lançadas depois
+          [tipoMencao]: mencao,
         });
       } catch (error) {
         const aluno = alunos.find((item) => item.id === alunoId);
@@ -181,6 +182,25 @@ export default function BoletimScreen({ navigation, route }) {
   );
 
   const nenhumaNota = isProfessor ? notasFiltradas.length === 0 : linhas.length === 0;
+
+  // o modal lê do estado atual, então mostra a nota já atualizada depois de salvar
+  const notaAberta = aberto?.notaId ? notas.find((nota) => nota.id === aberto.notaId) : null;
+  const linhaAberta = aberto?.chave ? agruparPorDisciplina(notas).find((linha) => linha.chave === aberto.chave) : null;
+  const modal = notaAberta
+    ? {
+        title: notaAberta.disciplina?.nome,
+        subtitle: `${notaAberta.aluno?.nome} · ${notaAberta.turma?.nome}`,
+        notas: { [notaAberta.bimestre]: notaAberta },
+        bimestres: [notaAberta.bimestre],
+      }
+    : linhaAberta
+      ? {
+          title: linhaAberta.disciplina,
+          subtitle: isAluno ? '' : `${linhaAberta.aluno} · ${linhaAberta.turma}`,
+          notas: linhaAberta.notas,
+          bimestres,
+        }
+      : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -230,51 +250,33 @@ export default function BoletimScreen({ navigation, route }) {
         {showForm && (
           <View style={styles.formCard}>
             <Text style={styles.formLabel}>Turma</Text>
-            <View style={styles.options}>
-              {turmas.map((turma) => (
-                <Pressable
-                  key={turma.id}
-                  style={[styles.option, turmaId === turma.id && styles.optionActive]}
-                  onPress={() => selectTurma(turma.id)}
-                >
-                  <Text style={[styles.optionText, turmaId === turma.id && styles.optionTextActive]}>
-                    {turma.nome} ({turma.ano})
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <Select
+              options={turmas.map((turma) => ({ value: turma.id, label: `${turma.nome} (${turma.ano})` }))}
+              value={turmaId}
+              onChange={selectTurma}
+              placeholder="Selecione a turma"
+              emptyText="Nenhuma turma cadastrada."
+            />
 
             <Text style={styles.formLabel}>Alunos</Text>
-            {!turmaId ? (
-              <Text style={styles.formHint}>Escolha uma turma primeiro.</Text>
-            ) : alunos.length === 0 ? (
-              <Text style={styles.formHint}>Nenhum aluno nessa turma.</Text>
-            ) : null}
-            <View style={styles.options}>
-              {alunos.map((aluno) => (
-                <Pressable
-                  key={aluno.id}
-                  style={[styles.option, alunoIds.includes(aluno.id) && styles.optionActive]}
-                  onPress={() => toggleAluno(aluno.id)}
-                >
-                  <Text style={[styles.optionText, alunoIds.includes(aluno.id) && styles.optionTextActive]}>{aluno.nome}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Select
+              multiple
+              options={alunos.map((aluno) => ({ value: aluno.id, label: aluno.nome }))}
+              values={alunoIds}
+              onChange={setAlunoIds}
+              placeholder={turmaId ? 'Selecione os alunos' : 'Escolha uma turma primeiro'}
+              emptyText="Nenhum aluno nessa turma."
+              disabled={!turmaId}
+            />
 
             <Text style={styles.formLabel}>Disciplina</Text>
-            {disciplinas.length === 0 ? <Text style={styles.formHint}>Nenhuma disciplina cadastrada para você.</Text> : null}
-            <View style={styles.options}>
-              {disciplinas.map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={[styles.option, disciplinaId === item.id && styles.optionActive]}
-                  onPress={() => setDisciplinaId(item.id)}
-                >
-                  <Text style={[styles.optionText, disciplinaId === item.id && styles.optionTextActive]}>{item.nome}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Select
+              options={disciplinas.map((item) => ({ value: item.id, label: item.nome }))}
+              value={disciplinaId}
+              onChange={setDisciplinaId}
+              placeholder="Selecione a disciplina"
+              emptyText="Nenhuma disciplina cadastrada para você."
+            />
 
             <Text style={styles.formLabel}>Bimestre</Text>
             <View style={styles.options}>
@@ -289,15 +291,30 @@ export default function BoletimScreen({ navigation, route }) {
               ))}
             </View>
 
-            {tiposMencao.map((tipo) => (
-              <View key={tipo.campo}>
-                <Text style={styles.formLabel}>Menção de {tipo.label.toLowerCase()}</Text>
-                <MencaoOptions
-                  value={mencoesForm[tipo.campo]}
-                  onChange={(valor) => setMencoesForm({ ...mencoesForm, [tipo.campo]: valor })}
-                />
-              </View>
-            ))}
+            <Text style={styles.formLabel}>Tipo de menção</Text>
+            <View style={styles.options}>
+              {tiposMencao.map((tipo) => (
+                <Pressable
+                  key={tipo.campo}
+                  style={[styles.option, tipoMencao === tipo.campo && styles.optionActive]}
+                  onPress={() => setTipoMencao(tipo.campo)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: tipoMencao === tipo.campo }}
+                >
+                  <Text style={[styles.optionText, tipoMencao === tipo.campo && styles.optionTextActive]}>{tipo.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.formLabel}>
+              {tipoMencao
+                ? `Menção de ${tiposMencao.find((tipo) => tipo.campo === tipoMencao).label.toLowerCase()}`
+                : 'Menção'}
+            </Text>
+            <MencaoOptions value={mencao} onChange={setMencao} />
+            <Text style={styles.formHint}>
+              As outras menções podem ser lançadas depois. A menção final aparece quando as três estiverem preenchidas.
+            </Text>
 
             {formError ? <Text style={styles.formError}>{formError}</Text> : null}
 
@@ -308,7 +325,7 @@ export default function BoletimScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityState={{ disabled: saving }}
             >
-              <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : alunoIds.length > 1 ? `Salvar ${alunoIds.length} notas` : 'Salvar nota'}</Text>
+              <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : alunoIds.length > 1 ? `Salvar para ${alunoIds.length} alunos` : 'Salvar menção'}</Text>
             </Pressable>
           </View>
         )}
@@ -327,16 +344,27 @@ export default function BoletimScreen({ navigation, route }) {
             <Text style={styles.stateText}>Nenhuma nota encontrada.</Text>
           </View>
         ) : isProfessor ? (
-          notasFiltradas.map((nota) => <NotaCard key={nota.id} nota={nota} onChange={loadNotas} />)
+          notasFiltradas.map((nota) => <NotaCard key={nota.id} nota={nota} onPress={() => setAberto({ notaId: nota.id })} />)
         ) : (
           linhas.map((linha) => (
-            <View key={linha.chave} style={styles.subjectCard}>
-              <Text style={styles.subjectName}>{linha.disciplina}</Text>
-              {!isAluno && (
-                <Text style={styles.subjectMeta}>
-                  {linha.aluno} · {linha.turma}
-                </Text>
-              )}
+            <Pressable
+              key={linha.chave}
+              style={({ pressed }) => [styles.subjectCard, pressed && styles.cardPressed]}
+              onPress={() => setAberto({ chave: linha.chave })}
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir notas de ${linha.disciplina}`}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.cardTitle}>
+                  <Text style={styles.subjectName}>{linha.disciplina}</Text>
+                  {!isAluno && (
+                    <Text style={styles.subjectMeta}>
+                      {linha.aluno} · {linha.turma}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={boletimColors.muted} />
+              </View>
 
               <View style={styles.bimestres}>
                 {bimestres.map((bimestre) => {
@@ -353,10 +381,21 @@ export default function BoletimScreen({ navigation, route }) {
                   );
                 })}
               </View>
-            </View>
+            </Pressable>
           ))
         )}
       </ScrollView>
+
+      <NotaModal
+        visible={Boolean(modal)}
+        title={modal?.title}
+        subtitle={modal?.subtitle}
+        notas={modal?.notas ?? {}}
+        bimestres={modal?.bimestres ?? []}
+        podeEditar={!isAluno}
+        onClose={() => setAberto(null)}
+        onChange={loadNotas}
+      />
 
       <EloTabBar active="Boletim" navigation={navigation} variant={route.params?.profile === 'Professor' ? 'professor' : 'student'} />
     </SafeAreaView>

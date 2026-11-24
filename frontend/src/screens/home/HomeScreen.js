@@ -122,7 +122,6 @@ export default function HomeScreen({ navigation, route }) {
           <View style={styles.todayBadge}><Text style={styles.todayText}>HOJE</Text></View>
           <Text style={styles.heroTitle}>Seu dia na escola</Text>
           <Text style={styles.heroDescription}>Eventos escolares não estão disponíveis no momento.</Text>
-          <Text style={styles.heroLink}>Calendário</Text>
         </View>
 
         <View style={styles.sectionHeader}>
@@ -173,15 +172,6 @@ export default function HomeScreen({ navigation, route }) {
             </Pressable>
           </>
         )}
-
-        <View style={styles.notice}>
-          <View style={styles.noticeDot} />
-          <View style={styles.noticeText}>
-            <Text style={styles.noticeTitle}>Calendário escolar</Text>
-            <Text style={styles.noticeDate}>Eventos não estão disponíveis no momento.</Text>
-          </View>
-          <Image source={require('../../../assets/elo-home-arrow.png')} style={styles.noticeArrow} />
-        </View>
       </ScrollView>
 
       <EloTabBar active="Início" navigation={navigation} variant={isProfessor ? 'professor' : 'student'} />

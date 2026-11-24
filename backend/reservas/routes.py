@@ -1,4 +1,5 @@
-from datetime import date, time
+import uuid
+from datetime import date, time, timedelta
 
 from fastapi import HTTPException, APIRouter
 from pydantic import BaseModel, Field
@@ -17,6 +18,12 @@ class ReservaEntrada(BaseModel):
     horario_inicio: time
     horario_fim: time
     finalidade: str | None = Field(default=None, min_length=1)
+    # reserva recorrente: repete toda semana, no mesmo dia da semana de "data", até essa data
+    repetir_ate: date | None = None
+
+
+# no máximo um ano de reservas numa série só
+MAX_SEMANAS = 52
 
 
 class ReservaAtualizacao(BaseModel):
@@ -29,14 +36,25 @@ class ReservaAtualizacao(BaseModel):
     status: str | None = Field(default=None, min_length=1, max_length=30)
 
 
-# outra reserva da mesma sala, no mesmo dia, com horário que se cruza com o novo
-def sala_ocupada(sala_id, data, inicio, fim):
+# todas as datas da série: a primeira e a mesma semana seguinte, até repetir_ate
+def datas_da_serie(inicio, repetir_ate):
+    datas = [inicio]
+    if repetir_ate:
+        proxima = inicio + timedelta(days=7)
+        while proxima <= repetir_ate:
+            datas.append(proxima)
+            proxima += timedelta(days=7)
+    return datas
+
+
+# quais dessas datas já têm outra reserva da sala com horário que se cruza (uma consulta só)
+def datas_ocupadas(sala_id, datas, inicio, fim):
     try:
         resposta = (
             supabase.table("reservas")
-            .select("id")
+            .select("data")
             .eq("sala_id", sala_id)
-            .eq("data", data.isoformat())
+            .in_("data", [data.isoformat() for data in datas])
             .lt("horario_inicio", fim.isoformat())
             .gt("horario_fim", inicio.isoformat())
             .execute()
@@ -45,7 +63,8 @@ def sala_ocupada(sala_id, data, inicio, fim):
     except APIError:
         raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
 
-    return bool(resposta.data)
+    ocupadas = {linha["data"] for linha in resposta.data}
+    return [data for data in datas if data.isoformat() in ocupadas]
 
 
 @router.get("/reservas", status_code=200)
@@ -96,19 +115,69 @@ def criar_reserva(dados: ReservaEntrada):
     if not usuario.data:
         raise HTTPException(status_code=400, detail="Apenas professores e gestores podem reservar salas")
 
-    if sala_ocupada(dados.sala_id, dados.data, dados.horario_inicio, dados.horario_fim):
-        raise HTTPException(status_code=409, detail="Essa sala já está reservada nesse horário")
+    if dados.repetir_ate:
+        if dados.repetir_ate <= dados.data:
+            raise HTTPException(status_code=400, detail="A data final da repetição deve ser depois da primeira reserva")
+        if dados.repetir_ate > dados.data + timedelta(weeks=MAX_SEMANAS):
+            raise HTTPException(status_code=400, detail="A repetição pode durar no máximo um ano")
+
+    datas = datas_da_serie(dados.data, dados.repetir_ate)
+
+    # se qualquer semana estiver ocupada, não cria nenhuma (e diz quais datas deram conflito)
+    conflitos = datas_ocupadas(dados.sala_id, datas, dados.horario_inicio, dados.horario_fim)
+    if conflitos:
+        if len(datas) == 1:
+            raise HTTPException(status_code=409, detail="Essa sala já está reservada nesse horário")
+        lista = ", ".join(data.strftime("%d/%m") for data in conflitos)
+        raise HTTPException(status_code=409, detail=f"Essa sala já está reservada nesse horário em: {lista}")
+
+    base = dados.model_dump(mode="json", exclude={"repetir_ate"})
+    recorrencia_id = str(uuid.uuid4()) if len(datas) > 1 else None
+    novas = [
+        {**base, "data": data.isoformat(), **({"recorrencia_id": recorrencia_id} if recorrencia_id else {})}
+        for data in datas
+    ]
 
     try:
-        resposta = supabase.table("reservas").insert(dados.model_dump(mode="json")).execute()
-
-        return {
-            "mensagem": "Reserva criada com sucesso",
-            **resposta.data[0],
-        }
+        resposta = supabase.table("reservas").insert(novas).execute()
 
     except APIError as erro:
         raise HTTPException(status_code=400, detail=f"Não foi possível cadastrar a reserva: {erro.message}")
+
+    if recorrencia_id:
+        return {
+            "mensagem": f"{len(resposta.data)} reservas criadas, uma por semana",
+            "recorrencia_id": recorrencia_id,
+            "reservas": resposta.data,
+        }
+
+    return {
+        "mensagem": "Reserva criada com sucesso",
+        **resposta.data[0],
+    }
+
+
+# cancela uma série recorrente a partir de um dia (por padrão, hoje); as reservas anteriores ficam
+@router.delete("/reservas/recorrencias/{recorrencia_id}", status_code=200)
+def cancelar_recorrencia(recorrencia_id: uuid.UUID, a_partir_de: date | None = None):
+    inicio = a_partir_de or date.today()
+
+    try:
+        resposta = (
+            supabase.table("reservas")
+            .delete()
+            .eq("recorrencia_id", str(recorrencia_id))
+            .gte("data", inicio.isoformat())
+            .execute()
+        )
+
+    except APIError as erro:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar no banco de dados: {erro.message}")
+
+    if not resposta.data:
+        raise HTTPException(status_code=404, detail="Nenhuma reserva dessa série a partir dessa data")
+
+    return {"mensagem": f"{len(resposta.data)} reserva(s) cancelada(s)", "canceladas": len(resposta.data)}
 
 
 

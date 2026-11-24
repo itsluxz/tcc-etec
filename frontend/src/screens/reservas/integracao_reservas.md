@@ -191,3 +191,39 @@ Nas reservas feitas por quem está logado (`reserva.usuario_id === user.id`) apa
 - **Aprovação de reservas.** A tabela tem a coluna `status`, que o banco preenche com `PENDENTE`, mas nada usa esse valor ainda: toda reserva vale assim que é criada.
 - **Mais de 7 dias.** Para reservar mais longe, seria preciso um calendário.
 - **Segurança.** Como no resto do app, a API confia no `usuario_id` enviado (ainda não existe JWT). Cancelar só aparece para o dono na tela, mas a API aceita de qualquer um.
+
+---
+
+## Reserva recorrente (toda semana)
+
+Para aulas fixas, como "toda sexta, das 07:00 às 10:00, Matemática", o formulário tem **Repetir toda semana**: Não repete, 4 semanas, 8 semanas, 12 semanas ou 6 meses. A repetição usa o dia da semana do dia escolhido, e o formulário mostra o resumo, ex: "Toda sexta-feira, das 07:00 às 10:00, até 18/12/2026 (5 reservas)".
+
+### Banco
+
+Cada semana vira uma linha normal em `reservas`. As linhas da mesma série têm o mesmo `recorrencia_id`. Script em `backend/banco_dados/reservas_recorrentes.sql`:
+
+```sql
+alter table reservas add column recorrencia_id uuid;
+create index reservas_recorrencia_id_idx on reservas (recorrencia_id);
+```
+
+Assim a tela, os filtros (`?data=`) e a checagem de horário ocupado continuam iguais: cada semana é uma reserva comum.
+
+### `POST /reservas` com `repetir_ate`
+
+```json
+{ "sala_id": 9, "usuario_id": 14, "data": "2026-11-27", "horario_inicio": "07:00", "horario_fim": "10:00",
+  "finalidade": "Matemática", "repetir_ate": "2026-12-18" }
+```
+
+- Cria uma reserva por semana, de `data` até `repetir_ate`, todas com o mesmo `recorrencia_id`.
+- Se **qualquer** semana já estiver ocupada, não cria nenhuma e responde 409 com as datas do conflito: "Essa sala já está reservada nesse horário em: 04/12, 11/12".
+- `repetir_ate` precisa ser depois de `data` e pode ir até um ano depois.
+- Sem `repetir_ate`, funciona como antes (uma reserva só).
+
+### Cancelar
+
+- **Só esta:** `DELETE /reservas/{id}`, como antes.
+- **Esta e as próximas:** `DELETE /reservas/recorrencias/{recorrencia_id}?a_partir_de=2026-12-04`. As semanas antes dessa data ficam.
+
+Na tela, a reserva recorrente mostra "↻ Toda sexta-feira", e o **Cancelar** pergunta "Só esta" ou "Esta e as próximas".

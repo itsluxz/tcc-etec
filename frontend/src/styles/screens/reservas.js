@@ -107,6 +107,10 @@ export const reservasStyles = {
       fontSize: 12,
     },
     formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    formSuccess: { marginTop: 12, color: colors.success, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+    // reserva recorrente
+    slotRepeat: { marginTop: 3, color: '#3264F5', fontSize: 11, fontWeight: '700' },
+    slotQuestionBlock: { marginTop: 6 },
     saveButton: { marginTop: 16 },
   }),
 };

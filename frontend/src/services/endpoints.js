@@ -25,8 +25,12 @@ export const salasApi = {
 export const reservasApi = {
   // filtros opcionais: { data, sala_id, usuario_id }
   list: (filtros) => api.get('/reservas', { params: filtros }),
+  // com repetir_ate, cria uma reserva por semana até essa data
   create: (reserva) => api.post('/reservas', reserva),
   remove: (reservaId) => api.delete(`/reservas/${reservaId}`),
+  // cancela uma série semanal a partir de um dia (inclusive)
+  removeSerie: (recorrenciaId, aPartirDe) =>
+    api.delete(`/reservas/recorrencias/${recorrenciaId}`, { params: { a_partir_de: aPartirDe } }),
 };
 
 export const notasApi = {
@@ -38,10 +42,25 @@ export const notasApi = {
   remove: (notaId) => api.delete(`/notas/${notaId}`),
 };
 
+export const avisosApi = {
+  list: () => api.get('/avisos'),
+  get: (avisoId) => api.get(`/avisos/${avisoId}`),
+  create: (aviso) => api.post('/avisos', aviso),
+  update: (avisoId, aviso) => api.put(`/avisos/${avisoId}`, aviso),
+  remove: (avisoId) => api.delete(`/avisos/${avisoId}`),
+  // envia uma imagem ({ base64, tipo }) e recebe { url }; tempo maior porque a imagem é grande
+  uploadImagem: (imagem) => api.post('/avisos/imagens', imagem, { timeout: 60000 }),
+};
+
 export const cardapiosApi = {
   list: () => api.get('/cardapios'),
   get: (cardapioId) => api.get(`/cardapios/${cardapioId}`),
   create: (cardapio) => api.post('/cardapios', cardapio),
   update: (cardapioId, cardapio) => api.put(`/cardapios/${cardapioId}`, cardapio),
   remove: (cardapioId) => api.delete(`/cardapios/${cardapioId}`),
+  // "Comerá hoje?": resposta do aluno e contagem para a gestão
+  getResposta: (cardapioId, alunoId) => api.get(`/cardapios/${cardapioId}/respostas/${alunoId}`),
+  responder: (cardapioId, alunoId, vaiComer) =>
+    api.put(`/cardapios/${cardapioId}/respostas/${alunoId}`, { vai_comer: vaiComer }),
+  resumo: (cardapioId) => api.get(`/cardapios/${cardapioId}/resumo`),
 };
