@@ -19,7 +19,24 @@ function MencaoPill({ mencao }) {
 // modal com as notas completas (trabalho, atividades, prova e final) de cada bimestre
 // notas: { [bimestre]: nota }; bimestres: quais bimestres mostrar
 // podeEditar: professor e gestão trocam as menções e excluem; aluno só vê
-export default function NotaModal({ visible, title, subtitle, notas, bimestres, podeEditar, onClose, onChange }) {
+// novaNota: { aluno_id, professor_id, turma_id, disciplina_id } — com ele, os bimestres
+//   sem nota ganham o botão "Lançar menções"
+// children: aparece acima dos bimestres (a escolha da matéria, no professor e na gestão)
+// emptyText: texto quando não há bimestres para mostrar
+export default function NotaModal({
+  visible,
+  title,
+  subtitle,
+  notas,
+  bimestres,
+  podeEditar,
+  novaNota,
+  children,
+  emptyText,
+  onClose,
+  onChange,
+}) {
+  // id da nota em edição, ou "novo-<disciplina>-<bimestre>" ao lançar num bimestre vazio
   const [editingId, setEditingId] = useState(null);
   const [mencoes, setMencoes] = useState({});
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -50,15 +67,38 @@ export default function NotaModal({ visible, title, subtitle, notas, bimestres, 
     setErrorMessage('');
   }
 
-  async function handleUpdate() {
+  // a disciplina entra na chave para a edição não "pular" para outra matéria quando ela é trocada
+  const chaveNova = (bimestre) => `novo-${novaNota?.disciplina_id}-${bimestre}`;
+
+  function startNew(bimestre) {
+    setMencoes({});
+    setEditingId(chaveNova(bimestre));
+    setConfirmDeleteId(null);
+    setErrorMessage('');
+  }
+
+  async function handleSave(bimestre) {
+    const lancando = editingId === chaveNova(bimestre);
+    // só as menções escolhidas; a API completa as que faltarem depois
+    const preenchidas = Object.fromEntries(Object.entries(mencoes).filter(([, valor]) => valor));
+    if (lancando && Object.keys(preenchidas).length === 0) {
+      setErrorMessage('Escolha pelo menos uma menção.');
+      return;
+    }
+
     setSaving(true);
     setErrorMessage('');
     try {
-      await notasApi.update(editingId, mencoes);
+      if (lancando) {
+        await notasApi.create({ ...novaNota, bimestre, ...preenchidas });
+      } else {
+        await notasApi.update(editingId, preenchidas);
+      }
       setEditingId(null);
       onChange();
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Não foi possível atualizar a nota.'));
+      const fallback = lancando ? 'Não foi possível lançar as menções.' : 'Não foi possível atualizar a nota.';
+      setErrorMessage(getApiErrorMessage(error, fallback));
     } finally {
       setSaving(false);
     }
@@ -73,6 +113,37 @@ export default function NotaModal({ visible, title, subtitle, notas, bimestres, 
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Não foi possível excluir a nota.'));
     }
+  }
+
+  // os botões de menção (trabalho, atividades, prova) + salvar/cancelar
+  function renderEditor(bimestre) {
+    return (
+      <>
+        {tiposMencao.map((tipo) => (
+          <View key={tipo.campo}>
+            <Text style={styles.formLabel}>{tipo.label}</Text>
+            <MencaoOptions
+              value={mencoes[tipo.campo]}
+              onChange={(valor) => setMencoes({ ...mencoes, [tipo.campo]: valor })}
+            />
+          </View>
+        ))}
+        <View style={styles.editButtons}>
+          <Pressable
+            style={[primaryButtonStyles.button, styles.editSaveButton, saving && primaryButtonStyles.disabled]}
+            onPress={() => handleSave(bimestre)}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving }}
+          >
+            <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : 'Salvar'}</Text>
+          </Pressable>
+          <Pressable onPress={() => setEditingId(null)} accessibilityRole="button">
+            <Text style={styles.editCancel}>Cancelar</Text>
+          </Pressable>
+        </View>
+      </>
+    );
   }
 
   return (
@@ -91,9 +162,13 @@ export default function NotaModal({ visible, title, subtitle, notas, bimestres, 
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {children}
+
+            {bimestres.length === 0 && emptyText ? <Text style={styles.modalEmpty}>{emptyText}</Text> : null}
+
             {bimestres.map((bimestre) => {
               const nota = notas[bimestre];
-              const editing = nota && editingId === nota.id;
+              const editing = nota ? editingId === nota.id : editingId === chaveNova(bimestre);
 
               return (
                 <View key={bimestre} style={styles.modalSection}>
@@ -107,33 +182,16 @@ export default function NotaModal({ visible, title, subtitle, notas, bimestres, 
                     ) : null}
                   </View>
 
-                  {!nota ? (
-                    <Text style={styles.formHint}>Nenhuma menção lançada.</Text>
-                  ) : editing ? (
+                  {editing ? (
+                    renderEditor(bimestre)
+                  ) : !nota ? (
                     <>
-                      {tiposMencao.map((tipo) => (
-                        <View key={tipo.campo}>
-                          <Text style={styles.formLabel}>{tipo.label}</Text>
-                          <MencaoOptions
-                            value={mencoes[tipo.campo]}
-                            onChange={(valor) => setMencoes({ ...mencoes, [tipo.campo]: valor })}
-                          />
-                        </View>
-                      ))}
-                      <View style={styles.editButtons}>
-                        <Pressable
-                          style={[primaryButtonStyles.button, styles.editSaveButton, saving && primaryButtonStyles.disabled]}
-                          onPress={handleUpdate}
-                          disabled={saving}
-                          accessibilityRole="button"
-                          accessibilityState={{ disabled: saving }}
-                        >
-                          <Text style={primaryButtonStyles.label}>{saving ? 'Salvando...' : 'Salvar'}</Text>
+                      <Text style={styles.formHint}>Nenhuma menção lançada.</Text>
+                      {podeEditar && novaNota ? (
+                        <Pressable style={styles.modalActions} onPress={() => startNew(bimestre)} accessibilityRole="button">
+                          <Text style={styles.menuItem}>+ Lançar menções</Text>
                         </Pressable>
-                        <Pressable onPress={() => setEditingId(null)} accessibilityRole="button">
-                          <Text style={styles.editCancel}>Cancelar</Text>
-                        </Pressable>
-                      </View>
+                      ) : null}
                     </>
                   ) : (
                     <>

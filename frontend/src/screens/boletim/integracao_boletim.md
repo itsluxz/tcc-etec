@@ -10,7 +10,7 @@ Este documento explica as mudanças feitas no frontend para a tela de boletim mo
 |---|---|
 | `src/services/endpoints.js` | Novos `notasApi`, `turmasApi`, `disciplinasApi` e `usuariosApi`, iguais ao `cardapiosApi` |
 | `src/screens/boletim/BoletimScreen.js` | Busca as notas na API, mostra as menções por bimestre e tem o botão de adicionar nota |
-| `src/screens/boletim/NotaCard.js` | Cartão de nota do professor, com o menu de 3 pontinhos (editar e excluir) |
+| `src/screens/boletim/NotaModal.js` | Modal com as notas dos 4 bimestres: ver, lançar, trocar menções e excluir |
 | `src/screens/boletim/MencaoOptions.js` | Os 4 botões de menção, usados no formulário e na edição |
 | `src/styles/screens/boletim.js` | Estilos dos cartões, do formulário, do menu e cor de cada menção |
 | `backend/notas/routes.py` | Três menções por nota, menção final calculada e 409 para nota repetida |
@@ -103,8 +103,8 @@ O padrão é o mesmo do `handleLogin`: `try` chama a API, `catch` usa o `getApiE
 | Perfil | Chamada | O que aparece |
 |---|---|---|
 | Aluno | `GET /notas?aluno_id={user.id}` | O boletim inteiro dele: um cartão por disciplina, com a **menção final** de cada bimestre |
-| Professor | `GET /notas?professor_id={user.id}` | As notas que **ele lançou**: um cartão por nota, com as três menções, a final e os 3 pontinhos para editar e excluir |
-| Gestão | `GET /notas` | As notas de todos os alunos, agrupadas como no boletim do aluno, com nome e turma em cada cartão. Só leitura |
+| Professor | `GET /notas?turma_id={turma}` | Escolhe a turma, vê um cartão por aluno e, no modal do aluno, escolhe a matéria (só as que ele dá aula). Ver seção 6 |
+| Gestão | `GET /notas?turma_id={turma}` | Igual ao professor, mas com todas as matérias. Ver seção 6 |
 
 ### Juntando as notas por disciplina (aluno e gestão)
 
@@ -309,44 +309,31 @@ Em vez de um `<select>`, as opções são uma lista de `Pressable`. O selecionad
 
 ---
 
-## 6. Editar e excluir nota (só professor)
+## 6. Turma → aluno → matéria (professor e gestão)
 
-Na tela do **professor**, cada nota lançada vira um cartão (`NotaCard.js`) com:
-- disciplina e bimestre no título, aluno e turma embaixo;
-- as colunas **Trabalho**, **Atividades**, **Prova** e **Final**, cada uma com a cor da menção;
-- o botão de **3 pontinhos** (`ellipsis-vertical`, dos mesmos ícones usados na `MainTabs`) no canto.
+Professor e gestão não veem mais uma lista de notas soltas. A tela segue três passos:
 
-Aluno e gestão não veem esses cartões nem os 3 pontinhos: eles veem o boletim agrupado por disciplina.
+1. **Turma**: um `Select` no topo, com as turmas de `GET /turmas` (as mais recentes primeiro). Antes de escolher, a tela mostra "Escolha uma turma para ver os alunos."
+2. **Alunos**: ao escolher a turma, a tela busca ao mesmo tempo (`Promise.all`) os alunos (`GET /usuarios?tipo=ALUNO&turma_id=…`) e as notas da turma (`GET /notas?turma_id=…`). Cada aluno vira um cartão com as iniciais, o nome e o **curso**. A busca filtra os alunos pelo nome.
+3. **Modal do aluno**: tocar no cartão abre o `NotaModal` com os botões de **Matéria** no topo. Escolhida a matéria, aparecem os 4 bimestres com as menções daquele aluno naquela matéria.
 
-### O menu
+O banco não tem um campo de curso: o curso é o nome da turma (ex.: "Informatica Para Internet · 2026").
 
-Tocar nos 3 pontinhos abre um menu dentro do próprio cartão com **Editar** e **Excluir**. Tocar de novo fecha.
+As matérias vêm de `GET /disciplinas`. O professor vê só as que dá aula (`?professor_id=`), e a gestão vê todas. Se só existe uma matéria, o modal já abre nela.
 
-- **Excluir** não apaga direto: o menu troca para "Excluir esta nota?" com **Cancelar** e **Excluir**. Só o segundo **Excluir** chama `DELETE /notas/{id}`.
-- A confirmação é feita no próprio cartão, e não com `Alert.alert`, porque os botões do `Alert` não funcionam quando o app roda no navegador.
+### No modal
 
-### Editando
+- **Bimestre com nota**: mostra Trabalho, Atividades, Prova e Final, com **Trocar menções** (`PUT /notas/{id}`) e **Excluir** (`DELETE /notas/{id}`). A exclusão pede confirmação no próprio modal, porque os botões do `Alert` não funcionam no navegador.
+- **Bimestre vazio**: mostra **+ Lançar menções**, que abre os mesmos botões de menção. Salvar chama `POST /notas` só com as menções escolhidas; as que faltarem podem ser lançadas depois.
 
-**Editar** troca as colunas do cartão pelos 3 grupos de botões de menção (o mesmo `MencaoOptions` do formulário), já marcados com as menções atuais. **Salvar** chama `PUT /notas/{id}` só com as três menções; **Cancelar** volta ao cartão sem mudar nada.
+O `NotaModal` é o mesmo do aluno. O que muda são as props:
+- `children`: os botões de matéria, mostrados acima dos bimestres;
+- `novaNota`: `{ aluno_id, professor_id, turma_id, disciplina_id }`. Com ela, os bimestres vazios ganham o **+ Lançar menções**;
+- `emptyText`: o texto mostrado enquanto nenhuma matéria foi escolhida.
 
-Para trocar aluno, disciplina ou bimestre, é preciso excluir a nota e lançar de novo.
+Depois de salvar ou excluir, o modal chama `onChange` e a tela recarrega as notas da turma. Como o modal lê as notas do estado da tela, ele já mostra a menção final recalculada.
 
-### Cada cartão cuida do próprio estado
-
-```js
-export default function NotaCard({ nota, onChange }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editing, setEditing] = useState(false);
-  ...
-}
-```
-
-O menu aberto, a confirmação e a edição ficam **dentro de cada cartão**, e não na `BoletimScreen`. Assim, abrir o menu de uma nota não mexe nas outras, e a tela principal não precisa saber qual nota está sendo editada.
-
-O cartão recebe duas coisas da tela:
-- `nota`: os dados da nota;
-- `onChange`: uma função para chamar depois de editar ou excluir. A tela passa o `loadNotas`, então a lista é recarregada e já mostra a final recalculada (ou some com a nota excluída).
+O botão **+ Adicionar nota** continua servindo para lançar a mesma menção para vários alunos de uma vez. Ele já abre com a turma que está na tela.
 
 ---
 
@@ -400,4 +387,4 @@ await notasApi.create({
 
 ### Menção final
 
-A `mencao_final` só é calculada quando as três menções estão preenchidas. Enquanto faltar alguma, ela vem `null` e o cartão mostra `—`. No cartão do professor, as menções que faltam também aparecem como `—`, e o **Editar** permite preenchê-las.
+A `mencao_final` só é calculada quando as três menções estão preenchidas. Enquanto faltar alguma, ela vem `null` e o cartão mostra `—`. No modal, as menções que faltam também aparecem como `—`, e o **Trocar menções** permite preenchê-las.

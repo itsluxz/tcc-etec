@@ -51,6 +51,26 @@ export const homeStyles = {
       fontSize: 13,
       lineHeight: 16,
     },
+    // aviso principal do mural: título em 1 linha e descrição em até 2 (o cartão tem altura fixa)
+    heroNoticeTitle: {
+      position: 'absolute',
+      top: 82,
+      left: 17,
+      right: 17,
+      color: '#FFFFFF',
+      fontSize: 14,
+      lineHeight: 18,
+      fontWeight: '700',
+    },
+    heroNoticeText: {
+      position: 'absolute',
+      top: 102,
+      left: 17,
+      right: 17,
+      color: '#E7EDFF',
+      fontSize: 12,
+      lineHeight: 16,
+    },
     sectionHeader: {
       marginTop: 18,
       height: 21,

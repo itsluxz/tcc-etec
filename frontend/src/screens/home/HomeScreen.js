@@ -3,9 +3,10 @@ import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import EloTabBar from '../../components/EloTabBar';
-import { cardapiosApi } from '../../services/endpoints';
+import { avisosApi, cardapiosApi } from '../../services/endpoints';
 import { getApiErrorMessage } from '../../services/errors';
 import { contentTopStyle } from '../../styles/common';
+import { avisosAtivos } from '../mural/avisosAtivos';
 import {
   createShortcutIconBoxStyle,
   homeShortcutTints,
@@ -31,6 +32,40 @@ export default function HomeScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(null);
   const [menuStatus, setMenuStatus] = useState('loading');
+  // aviso principal do mural (o mesmo do cartão azul de lá), mostrado em "Seu dia na escola"
+  const [notice, setNotice] = useState(null);
+  const [noticeStatus, setNoticeStatus] = useState('loading');
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      async function loadMainNotice() {
+        setNoticeStatus('loading');
+
+        try {
+          const { data } = await avisosApi.list();
+          if (!Array.isArray(data)) throw new Error('A resposta de avisos está em um formato inválido.');
+          const mainNotice = avisosAtivos(data)[0] ?? null;
+
+          if (active) {
+            setNotice(mainNotice);
+            setNoticeStatus('success');
+          }
+        } catch (error) {
+          if (active) {
+            setNotice(null);
+            setNoticeStatus('error');
+          }
+        }
+      }
+
+      loadMainNotice();
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -116,13 +151,31 @@ export default function HomeScreen({ navigation, route }) {
         <Text style={styles.greeting}>{greetingName ? `Bom dia, ${greetingName}!` : 'Olá!'}</Text>
         <Text style={styles.date}>{todayLabel}</Text>
 
-        <View style={styles.hero}>
+        <Pressable
+          style={styles.hero}
+          onPress={() => navigation.navigate('Mural')}
+          accessibilityRole="button"
+          accessibilityLabel={notice ? `Aviso principal: ${notice.titulo}. Abrir mural` : 'Abrir mural de avisos'}
+        >
           <Image source={require('../../../assets/elo-home-hero.png')} style={styles.heroImage} resizeMode="stretch" />
           <View style={styles.heroCircle} />
           <View style={styles.todayBadge}><Text style={styles.todayText}>HOJE</Text></View>
           <Text style={styles.heroTitle}>Seu dia na escola</Text>
-          <Text style={styles.heroDescription}>Eventos escolares não estão disponíveis no momento.</Text>
-        </View>
+          {notice ? (
+            <>
+              <Text style={styles.heroNoticeTitle} numberOfLines={1}>{notice.titulo}</Text>
+              <Text style={styles.heroNoticeText} numberOfLines={2}>{notice.descricao}</Text>
+            </>
+          ) : (
+            <Text style={styles.heroDescription}>
+              {noticeStatus === 'loading'
+                ? 'Carregando avisos...'
+                : noticeStatus === 'error'
+                  ? 'Não foi possível carregar os avisos.'
+                  : 'Nenhum aviso no mural hoje.'}
+            </Text>
+          )}
+        </Pressable>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Acesso rápido</Text>

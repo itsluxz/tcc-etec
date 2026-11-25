@@ -20,7 +20,9 @@ import EloTabBar from '../../components/EloTabBar';
 import { avisosApi } from '../../services/endpoints';
 import { getApiErrorMessage } from '../../services/errors';
 import { contentTopStyle, primaryButtonStyles } from '../../styles/common';
+import { colors } from '../../styles/global';
 import { muralStyles as styles } from '../../styles/screens/mural';
+import { avisosAtivos } from './avisosAtivos';
 
 const localStyles = StyleSheet.create({
   searchInput: { flex: 1, color: '#172441', fontSize: 12, paddingVertical: 0 },
@@ -101,6 +103,8 @@ export default function MuralScreen({ navigation, route }) {
   // professor e gestão publicam avisos; aluno só lê
   const tipoUsuario = String(user?.tipo ?? '').trim().toUpperCase();
   const podePublicar = tipoUsuario === 'PROFESSOR' || tipoUsuario === 'GESTAO';
+  // só a gestão edita e exclui avisos
+  const podeGerenciar = tipoUsuario === 'GESTAO';
 
   const [notices, setNotices] = useState([]);
   const [search, setSearch] = useState('');
@@ -109,14 +113,22 @@ export default function MuralScreen({ navigation, route }) {
   // qual aviso o cartão azul está mostrando (as setas trocam)
   const [featuredIndex, setFeaturedIndex] = useState(0);
 
-  // formulário de novo aviso (modal)
+  // formulário de novo aviso ou de edição (modal)
   const [showForm, setShowForm] = useState(false);
+  const [editingNotice, setEditingNotice] = useState(null); // aviso sendo editado; null = aviso novo
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
+  // número de dias, null ("não expira") ou 'manter' (edição: mantém a data atual)
   const [expiraDias, setExpiraDias] = useState(null);
-  const [imagens, setImagens] = useState([]); // [{ uri, base64 }] escolhidas na galeria
+  // [{ uri, base64 }]: as escolhidas na galeria têm base64; as que já estão no aviso só têm o link (uri)
+  const [imagens, setImagens] = useState([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // exclusão (gestão): confirmação no próprio cartão, porque os botões do Alert não funcionam no navegador
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   // isActive: evita atualizar a tela se o usuário já saiu dela
   async function loadNotices(isActive = () => true) {
@@ -127,15 +139,7 @@ export default function MuralScreen({ navigation, route }) {
       const { data } = await avisosApi.list();
       if (!Array.isArray(data)) throw new Error('A resposta de avisos está em um formato inválido.');
 
-      // esconde os desativados e os que já expiraram (expira_em é o último dia em que aparece)
-      const hoje = dateKey(new Date());
-      const activeNotices = data
-        .filter((notice) => notice?.ativo !== false && !(notice?.expira_em && notice.expira_em < hoje))
-        .sort((first, second) => {
-          const firstDate = Date.parse(first?.criado_em ?? '') || 0;
-          const secondDate = Date.parse(second?.criado_em ?? '') || 0;
-          return secondDate - firstDate;
-        });
+      const activeNotices = avisosAtivos(data);
 
       if (!isActive()) return;
       setNotices(activeNotices);
@@ -159,12 +163,15 @@ export default function MuralScreen({ navigation, route }) {
     }, []),
   );
 
-  function openForm() {
-    setTitulo('');
-    setDescricao('');
-    setExpiraDias(null);
-    setImagens([]);
+  // sem aviso: formulário vazio para um aviso novo; com aviso: preenchido para editar
+  function openForm(notice = null) {
+    setEditingNotice(notice);
+    setTitulo(notice?.titulo ?? '');
+    setDescricao(notice?.descricao ?? '');
+    setExpiraDias(notice?.expira_em ? 'manter' : null);
+    setImagens((notice?.imagens ?? []).map((url) => ({ uri: url })));
     setFormError('');
+    setConfirmDeleteId(null);
     setShowForm(true);
   }
 
@@ -211,30 +218,118 @@ export default function MuralScreen({ navigation, route }) {
     setFormError('');
 
     try {
-      // primeiro envia as imagens (uma por vez); a API devolve o link de cada uma
+      // primeiro envia as imagens novas (uma por vez); a API devolve o link de cada uma
       const urls = [];
       for (const imagem of imagens) {
+        if (!imagem.base64) {
+          urls.push(imagem.uri); // já estava no aviso
+          continue;
+        }
         const { data } = await avisosApi.uploadImagem({ base64: imagem.base64, tipo: 'image/jpeg' });
         urls.push(data.url);
       }
 
-      await avisosApi.create({
-        titulo: titulo.trim(),
-        descricao: descricao.trim(),
-        autor_id: user?.id,
-        expira_em: expiraDias ? daquiA(expiraDias) : undefined,
-        imagens: urls,
-      });
+      const aviso = { titulo: titulo.trim(), descricao: descricao.trim(), imagens: urls };
+
+      if (editingNotice) {
+        // 'manter' não manda a data; null tira a expiração
+        if (expiraDias !== 'manter') aviso.expira_em = expiraDias ? daquiA(expiraDias) : null;
+        await avisosApi.update(editingNotice.id, aviso);
+      } else {
+        await avisosApi.create({
+          ...aviso,
+          autor_id: user?.id,
+          expira_em: expiraDias ? daquiA(expiraDias) : undefined,
+        });
+        setSearch('');
+        setFeaturedIndex(0); // o aviso novo é o primeiro da lista
+      }
+
       setShowForm(false);
-      setSearch('');
-      setFeaturedIndex(0); // o aviso novo é o primeiro da lista
       loadNotices();
     } catch (error) {
-      setFormError(getApiErrorMessage(error, 'Não foi possível publicar o aviso.'));
+      const fallback = editingNotice ? 'Não foi possível salvar o aviso.' : 'Não foi possível publicar o aviso.';
+      setFormError(getApiErrorMessage(error, fallback));
     } finally {
       setSaving(false);
     }
   }
+
+  async function handleDelete(avisoId) {
+    setDeletingId(avisoId);
+    setActionError('');
+    try {
+      await avisosApi.remove(avisoId);
+      setConfirmDeleteId(null);
+      loadNotices();
+    } catch (error) {
+      setActionError(getApiErrorMessage(error, 'Não foi possível excluir o aviso.'));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  // botões Editar / Excluir de um aviso (só gestão); light = versão branca para o cartão azul
+  function renderActions(notice, light = false) {
+    if (!podeGerenciar) return null;
+
+    if (confirmDeleteId === notice.id) {
+      const deleting = deletingId === notice.id;
+      return (
+        <View style={styles.noticeActions}>
+          <Text style={[styles.noticeQuestion, light && styles.noticeTextLight]}>Excluir este aviso?</Text>
+          <Pressable
+            style={[styles.noticeButton, light && styles.noticeButtonLight]}
+            onPress={() => setConfirmDeleteId(null)}
+            disabled={deleting}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.noticeButtonText, light && styles.noticeTextLight]}>Não</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.noticeButton, styles.noticeButtonDanger, deleting && styles.navButtonDisabled]}
+            onPress={() => handleDelete(notice.id)}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Confirmar exclusão do aviso"
+          >
+            <Text style={[styles.noticeButtonText, styles.noticeTextLight]}>{deleting ? 'Excluindo...' : 'Sim, excluir'}</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.noticeActions}>
+        <Pressable
+          style={[styles.noticeButton, light && styles.noticeButtonLight]}
+          onPress={() => openForm(notice)}
+          accessibilityRole="button"
+          accessibilityLabel={`Editar aviso ${notice.titulo}`}
+        >
+          <Ionicons name="create-outline" size={15} color={light ? '#FFFFFF' : '#3264F5'} />
+          <Text style={[styles.noticeButtonText, light && styles.noticeTextLight]}>Editar</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.noticeButton, light && styles.noticeButtonLight]}
+          onPress={() => {
+            setActionError('');
+            setConfirmDeleteId(notice.id);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Excluir aviso ${notice.titulo}`}
+        >
+          <Ionicons name="trash-outline" size={15} color={light ? '#FFFFFF' : colors.danger} />
+          <Text style={[styles.noticeButtonText, light ? styles.noticeTextLight : styles.noticeTextDanger]}>Excluir</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // na edição de um aviso com data, a primeira opção mantém a data atual
+  const opcoesDoFormulario = editingNotice?.expira_em
+    ? [{ label: `Manter (até ${formatDay(editingNotice.expira_em)})`, dias: 'manter' }, ...opcoesExpiracao]
+    : opcoesExpiracao;
 
   const filteredNotices = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('pt-BR');
@@ -276,7 +371,7 @@ export default function MuralScreen({ navigation, route }) {
           {podePublicar && (
             <Pressable
               style={({ pressed }) => [styles.addButton, pressed && styles.addButtonPressed]}
-              onPress={openForm}
+              onPress={() => openForm()}
               accessibilityRole="button"
               accessibilityLabel="Criar aviso"
             >
@@ -325,6 +420,8 @@ export default function MuralScreen({ navigation, route }) {
                   </View>
                 ) : null}
 
+                {renderActions(featuredNotice, true)}
+
                 {temVarios && (
                   <View style={styles.featuredNav}>
                     <Pressable
@@ -359,6 +456,8 @@ export default function MuralScreen({ navigation, route }) {
           </View>
         </View>
 
+        {actionError ? <Text style={styles.formError}>{actionError}</Text> : null}
+
         <Text style={styles.recentTitle}>Avisos recentes</Text>
         {status === 'loading' ? (
           <View style={localStyles.state}>
@@ -388,6 +487,7 @@ export default function MuralScreen({ navigation, route }) {
               {notice.expira_em ? ` · até ${formatDay(notice.expira_em)}` : ''}
             </Text>
             <Text style={localStyles.noticeDescription}>{notice.descricao}</Text>
+            {renderActions(notice)}
           </View>
         ))}
       </ScrollView>
@@ -401,7 +501,7 @@ export default function MuralScreen({ navigation, route }) {
           <Pressable style={styles.modalDismiss} onPress={closeForm} accessibilityLabel="Fechar" />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Novo aviso</Text>
+              <Text style={styles.modalTitle}>{editingNotice ? 'Editar aviso' : 'Novo aviso'}</Text>
               <Pressable onPress={closeForm} hitSlop={10} accessibilityRole="button" accessibilityLabel="Fechar">
                 <Ionicons name="close" size={22} color="#71809B" />
               </Pressable>
@@ -431,7 +531,7 @@ export default function MuralScreen({ navigation, route }) {
 
               <Text style={styles.formLabel}>Expiração</Text>
               <View style={styles.chips}>
-                {opcoesExpiracao.map((opcao) => {
+                {opcoesDoFormulario.map((opcao) => {
                   const selected = expiraDias === opcao.dias;
                   return (
                     <Pressable
@@ -447,9 +547,11 @@ export default function MuralScreen({ navigation, route }) {
                 })}
               </View>
               <Text style={styles.formHint}>
-                {expiraDias
-                  ? `O aviso aparece no mural até ${formatDay(daquiA(expiraDias))}.`
-                  : 'O aviso fica no mural até ser removido.'}
+                {expiraDias === 'manter'
+                  ? `O aviso aparece no mural até ${formatDay(editingNotice.expira_em)}.`
+                  : expiraDias
+                    ? `O aviso aparece no mural até ${formatDay(daquiA(expiraDias))}.`
+                    : 'O aviso fica no mural até ser removido.'}
               </Text>
 
               <Text style={styles.formLabel}>Imagens (até {MAX_IMAGENS})</Text>
@@ -485,7 +587,11 @@ export default function MuralScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityState={{ disabled: saving }}
               >
-                <Text style={primaryButtonStyles.label}>{saving ? 'Publicando...' : 'Publicar aviso'}</Text>
+                <Text style={primaryButtonStyles.label}>
+                  {editingNotice
+                    ? saving ? 'Salvando...' : 'Salvar alterações'
+                    : saving ? 'Publicando...' : 'Publicar aviso'}
+                </Text>
               </Pressable>
             </ScrollView>
           </View>

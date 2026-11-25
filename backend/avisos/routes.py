@@ -108,7 +108,16 @@ def criar_aviso(dados: AvisoEntrada):
 
 @router.put("/avisos/{aviso_id}", status_code=200)
 def atualizar_aviso(aviso_id: int, dados: AvisoAtualizacao):
-    alteracoes = dados.model_dump(mode="json", exclude_none=True)
+    if dados.expira_em and dados.expira_em < date.today():
+        raise HTTPException(status_code=400, detail="A data de expiração já passou")
+
+    # só os campos enviados; "expira_em": null volta o aviso para "não expira",
+    # nos outros campos o null é ignorado
+    alteracoes = {
+        campo: valor
+        for campo, valor in dados.model_dump(mode="json", exclude_unset=True).items()
+        if valor is not None or campo == "expira_em"
+    }
     if not alteracoes:
         raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
 

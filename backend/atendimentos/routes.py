@@ -7,6 +7,9 @@ from database import supabase
 
 router = APIRouter(tags=["atendimentos"])
 
+# traz quem pediu (nome, tipo e turma) junto com o atendimento
+CAMPOS = "*, usuario:usuarios(nome, tipo, turma:turmas(nome, ano))"
+
 class AtendimentoEntrada(BaseModel):
     usuario_id: int | None = None
     assunto: str | None = Field(default=None, min_length=1, max_length=200)
@@ -23,7 +26,8 @@ class AtendimentoAtualizacao(BaseModel):
 @router.get("/atendimentos", status_code=200)
 def listar_atendimentos(usuario_id: int | None = Query(default=None, gt=0)):
     try:
-        consulta = supabase.table("atendimentos").select("*")
+        # mais recentes primeiro
+        consulta = supabase.table("atendimentos").select(CAMPOS).order("criado_em", desc=True)
         if usuario_id is not None:
             consulta = consulta.eq("usuario_id", usuario_id)
         resposta = consulta.execute()
@@ -37,7 +41,7 @@ def listar_atendimentos(usuario_id: int | None = Query(default=None, gt=0)):
 @router.get("/atendimentos/{atendimento_id}", status_code=200)
 def buscar_atendimento(atendimento_id: int):
     try:
-        resposta = supabase.table("atendimentos").select("*").eq("id", atendimento_id).execute()
+        resposta = supabase.table("atendimentos").select(CAMPOS).eq("id", atendimento_id).execute()
 
     except APIError:
         raise HTTPException(status_code=500, detail="Erro ao consultar no banco de dados")
@@ -64,7 +68,13 @@ def criar_atendimento(dados: AtendimentoEntrada):
 
 @router.put("/atendimentos/{atendimento_id}", status_code=200)
 def atualizar_atendimento(atendimento_id: int, dados: AtendimentoAtualizacao):
-    alteracoes = dados.model_dump(exclude_none=True)
+    # só os campos enviados; "assunto": null apaga o assunto (ele é opcional),
+    # nos outros campos o null é ignorado
+    alteracoes = {
+        campo: valor
+        for campo, valor in dados.model_dump(exclude_unset=True).items()
+        if valor is not None or campo == "assunto"
+    }
     if not alteracoes:
         raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
 

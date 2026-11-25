@@ -1,12 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import EloTabBar from '../../components/EloTabBar';
 import api from '../../services/api';
+import { atendimentosApi } from '../../services/endpoints';
 import { getApiErrorMessage } from '../../services/errors';
 import { contentTopStyle } from '../../styles/common';
-import { atendimentoStyles as styles } from '../../styles/screens/atendimento';
+import { atendimentoColors, atendimentoStyles as styles, statusStyle } from '../../styles/screens/atendimento';
+import AtendimentoModal, { formatarData } from './AtendimentoModal';
+import { ConfirmarExclusao, SolicitacaoForm } from './SolicitacaoEdicao';
 
 const localStyles = StyleSheet.create({
   button: {
@@ -48,17 +52,74 @@ const localStyles = StyleSheet.create({
   formError: { marginTop: 10, color: '#B42318', fontSize: 12, lineHeight: 17 },
 });
 
-function findUserId(route, navigation) {
+function findUser(route, navigation) {
   const parentMain = navigation.getParent()?.getState()?.routes?.find((item) => item.name === 'Main');
-  const id = route.params?.user?.id ?? parentMain?.params?.user?.id;
+  return route.params?.user ?? parentMain?.params?.user ?? null;
+}
+
+function findUserId(route, navigation) {
+  const id = findUser(route, navigation)?.id;
   return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function porMaisRecente(primeira, segunda) {
+  const dataPrimeira = Date.parse(primeira?.criado_em ?? '') || 0;
+  const dataSegunda = Date.parse(segunda?.criado_em ?? '') || 0;
+  return dataSegunda - dataPrimeira;
+}
+
+// junta as solicitações de alunos por aluno; o aluno que pediu por último vem primeiro
+// (Map, e não objeto: num objeto as chaves numéricas ficariam em ordem de id)
+function agruparPorAluno(lista) {
+  const grupos = new Map();
+  [...lista].sort(porMaisRecente).forEach((solicitacao) => {
+    if (solicitacao?.usuario?.tipo !== 'ALUNO') return;
+    if (!grupos.has(solicitacao.usuario_id)) {
+      grupos.set(solicitacao.usuario_id, {
+        id: solicitacao.usuario_id,
+        nome: solicitacao.usuario.nome,
+        turma: solicitacao.usuario.turma,
+        solicitacoes: [],
+      });
+    }
+    grupos.get(solicitacao.usuario_id).solicitacoes.push(solicitacao);
+  });
+  return [...grupos.values()];
+}
+
+// "Maria Clara Souza" -> "MC"
+function iniciais(nome = '') {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((parte) => parte[0])
+    .join('')
+    .toUpperCase();
+}
+
+// não existe campo de curso: o curso é o nome da turma, ex: "Informatica Para Internet · 2026"
+function nomeDoCurso(turma) {
+  return turma ? `${turma.nome} · ${turma.ano}` : 'Sem turma';
 }
 
 export default function AtendimentoScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const variant = route.params?.profile === 'Professor' ? 'professor' : 'student';
   const userId = findUserId(route, navigation);
+  const userTipo = String(findUser(route, navigation)?.tipo ?? '').trim().toUpperCase();
+  // professor e gestão veem as solicitações dos alunos, um cartão por aluno
+  const isStaff = userTipo === 'PROFESSOR' || userTipo === 'GESTAO';
   const activeRef = useRef(false);
+  const [alunos, setAlunos] = useState([]);
+  const [alunosStatus, setAlunosStatus] = useState('loading');
+  const [alunosError, setAlunosError] = useState('');
+  const [alunoAbertoId, setAlunoAbertoId] = useState(null);
+  // editar / excluir as próprias solicitações (em "Minhas solicitações")
+  const [meuEditandoId, setMeuEditandoId] = useState(null);
+  const [meuConfirmId, setMeuConfirmId] = useState(null);
+  const [meuSavingId, setMeuSavingId] = useState(null);
+  const [meuErro, setMeuErro] = useState('');
   const [tickets, setTickets] = useState([]);
   const [status, setStatus] = useState('loading');
   const [errorMessage, setErrorMessage] = useState('');
@@ -109,12 +170,67 @@ export default function AtendimentoScreen({ navigation, route }) {
       }
 
       loadTickets();
+      if (isStaff) loadAlunos();
       return () => {
         active = false;
         activeRef.current = false;
       };
-    }, [reloadKey, userId]),
+    }, [reloadKey, userId, isStaff]),
   );
+
+  // professor e gestão: todas as solicitações, agrupadas por aluno
+  // (também chamada pelo modal depois de responder ou mudar o status)
+  async function loadAlunos() {
+    setAlunosError('');
+    try {
+      const { data } = await atendimentosApi.list();
+      if (!Array.isArray(data)) throw new Error('A resposta de atendimentos está em um formato inválido.');
+      if (!activeRef.current) return;
+      const grupos = agruparPorAluno(data);
+      setAlunos(grupos);
+      setAlunosStatus(grupos.length ? 'success' : 'empty');
+    } catch (error) {
+      if (!activeRef.current) return;
+      setAlunos([]);
+      setAlunosStatus('error');
+      setAlunosError(getApiErrorMessage(error, 'Não foi possível carregar as solicitações dos alunos.'));
+    }
+  }
+
+  // depois de editar ou excluir, recarrega a própria lista (reloadKey) e, se for da equipe,
+  // a dos alunos também (a solicitação pode aparecer nas duas)
+  async function salvarMinha(solicitacaoId, dados) {
+    setMeuSavingId(solicitacaoId);
+    setMeuErro('');
+    try {
+      await atendimentosApi.update(solicitacaoId, dados);
+      if (!activeRef.current) return;
+      setMeuEditandoId(null);
+      setReloadKey((current) => current + 1);
+    } catch (error) {
+      if (activeRef.current) setMeuErro(getApiErrorMessage(error, 'Não foi possível salvar a solicitação.'));
+    } finally {
+      if (activeRef.current) setMeuSavingId(null);
+    }
+  }
+
+  async function excluirMinha(solicitacaoId) {
+    setMeuSavingId(solicitacaoId);
+    setMeuErro('');
+    try {
+      await atendimentosApi.remove(solicitacaoId);
+      if (!activeRef.current) return;
+      setMeuConfirmId(null);
+      setReloadKey((current) => current + 1);
+    } catch (error) {
+      if (activeRef.current) setMeuErro(getApiErrorMessage(error, 'Não foi possível excluir a solicitação.'));
+    } finally {
+      if (activeRef.current) setMeuSavingId(null);
+    }
+  }
+
+  // o modal lê do estado atual, então mostra a resposta e o status já atualizados
+  const alunoAberto = alunos.find((aluno) => aluno.id === alunoAbertoId) ?? null;
 
   async function createTicket() {
     const trimmedDescription = description.trim();
@@ -233,6 +349,59 @@ export default function AtendimentoScreen({ navigation, route }) {
           </View>
         )}
 
+        {isStaff && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Solicitações dos alunos</Text>
+              <View style={styles.openBadge}>
+                <Text style={styles.openBadgeText}>
+                  {alunosStatus === 'loading' ? 'Carregando' : `${alunos.length} ${alunos.length === 1 ? 'aluno' : 'alunos'}`}
+                </Text>
+              </View>
+            </View>
+
+            {alunosStatus === 'loading' ? (
+              <View style={localStyles.state}>
+                <ActivityIndicator size="small" color="#3264F5" />
+              </View>
+            ) : alunosStatus === 'error' ? (
+              <View style={localStyles.state}><Text style={localStyles.stateText}>{alunosError}</Text></View>
+            ) : alunosStatus === 'empty' ? (
+              <View style={localStyles.state}>
+                <Text style={localStyles.stateText}>Nenhum aluno enviou solicitações ainda.</Text>
+              </View>
+            ) : alunos.map((aluno) => {
+              const total = aluno.solicitacoes.length;
+              const pendentes = aluno.solicitacoes.filter((item) => (item.status ?? 'ABERTO') !== 'RESOLVIDO').length;
+
+              return (
+                <Pressable
+                  key={aluno.id}
+                  style={({ pressed }) => [styles.studentCard, pressed && styles.cardPressed]}
+                  onPress={() => setAlunoAbertoId(aluno.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir solicitações de ${aluno.nome}`}
+                >
+                  <View style={styles.studentAvatar}>
+                    <Text style={styles.studentInitials}>{iniciais(aluno.nome)}</Text>
+                  </View>
+                  <View style={styles.cardTitle}>
+                    <Text style={styles.cardName}>{aluno.nome}</Text>
+                    <Text style={styles.cardMeta}>{nomeDoCurso(aluno.turma)}</Text>
+                    <Text style={styles.cardMeta}>
+                      {total} {total === 1 ? 'solicitação' : 'solicitações'} · última em {formatarData(aluno.solicitacoes[0].criado_em)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.statusPill, statusStyle(pendentes ? 'ABERTO' : 'RESOLVIDO')]}>
+                    {pendentes ? `${pendentes} ${pendentes === 1 ? 'pendente' : 'pendentes'}` : 'Resolvidas'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={atendimentoColors.muted} />
+                </Pressable>
+              );
+            })}
+          </>
+        )}
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Minhas solicitações</Text>
           <View style={styles.openBadge}>
@@ -253,20 +422,84 @@ export default function AtendimentoScreen({ navigation, route }) {
           </View>
         ) : tickets.map((ticket) => (
           <View key={ticket.id} style={localStyles.ticket}>
-            <View style={localStyles.ticketHeading}>
-              <Text style={localStyles.ticketSubject}>{ticket.assunto || 'Solicitação sem assunto'}</Text>
-              <Text style={localStyles.ticketStatus}>{ticket.status || 'ABERTO'}</Text>
-            </View>
-            <Text style={localStyles.ticketDescription}>{ticket.descricao}</Text>
-            {ticket.resposta ? (
-              <View style={localStyles.reply}>
-                <Text style={localStyles.replyLabel}>RESPOSTA DA ESCOLA</Text>
-                <Text style={localStyles.replyText}>{ticket.resposta}</Text>
-              </View>
+            {meuEditandoId === ticket.id ? (
+              <>
+                <Text style={localStyles.ticketSubject}>Editar solicitação</Text>
+                <SolicitacaoForm
+                  solicitacao={ticket}
+                  saving={meuSavingId === ticket.id}
+                  onSave={(dados) => salvarMinha(ticket.id, dados)}
+                  onCancel={() => setMeuEditandoId(null)}
+                />
+              </>
+            ) : (
+              <>
+                <View style={localStyles.ticketHeading}>
+                  <Text style={localStyles.ticketSubject}>{ticket.assunto || 'Solicitação sem assunto'}</Text>
+                  <Text style={localStyles.ticketStatus}>{ticket.status || 'ABERTO'}</Text>
+                </View>
+                <Text style={localStyles.ticketDescription}>{ticket.descricao}</Text>
+                {ticket.resposta ? (
+                  <View style={localStyles.reply}>
+                    <Text style={localStyles.replyLabel}>RESPOSTA DA ESCOLA</Text>
+                    <Text style={localStyles.replyText}>{ticket.resposta}</Text>
+                  </View>
+                ) : null}
+
+                {meuConfirmId === ticket.id ? (
+                  <ConfirmarExclusao
+                    deleting={meuSavingId === ticket.id}
+                    onConfirm={() => excluirMinha(ticket.id)}
+                    onCancel={() => setMeuConfirmId(null)}
+                  />
+                ) : (
+                  <View style={styles.actionsRow}>
+                    <Pressable
+                      style={styles.requestAction}
+                      onPress={() => {
+                        setMeuEditandoId(ticket.id);
+                        setMeuConfirmId(null);
+                        setMeuErro('');
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="create-outline" size={15} color="#3264F5" />
+                      <Text style={styles.requestActionText}>Editar</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.requestAction}
+                      onPress={() => {
+                        setMeuConfirmId(ticket.id);
+                        setMeuEditandoId(null);
+                        setMeuErro('');
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="trash-outline" size={15} color={atendimentoColors.danger} />
+                      <Text style={[styles.requestActionText, styles.actionDanger]}>Excluir</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            )}
+            {meuErro && (meuEditandoId === ticket.id || meuConfirmId === ticket.id) ? (
+              <Text style={localStyles.formError}>{meuErro}</Text>
             ) : null}
           </View>
         ))}
       </ScrollView>
+
+      {isStaff && (
+        <AtendimentoModal
+          visible={Boolean(alunoAberto)}
+          title={alunoAberto?.nome}
+          subtitle={alunoAberto ? nomeDoCurso(alunoAberto.turma) : ''}
+          solicitacoes={alunoAberto?.solicitacoes ?? []}
+          onClose={() => setAlunoAbertoId(null)}
+          onChange={loadAlunos}
+        />
+      )}
+
       <EloTabBar active="Ajuda" navigation={navigation} variant={variant} />
     </SafeAreaView>
   );

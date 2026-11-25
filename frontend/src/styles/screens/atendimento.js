@@ -1,8 +1,24 @@
 import { StyleSheet } from 'react-native';
 import { commonScreenStyles } from '../common';
+import { colors } from '../global';
 
 const ink = '#172441';
 const muted = '#71809B';
+const border = '#E5EBF3';
+const surface = '#F5F7FC';
+export const atendimentoColors = { muted, danger: colors.danger };
+
+// cor de cada status: aberto (laranja), em andamento (azul), resolvido (verde)
+const statusColors = {
+  ABERTO: colors.warning,
+  'EM ANDAMENTO': colors.info,
+  RESOLVIDO: colors.success,
+};
+
+export const statusStyle = (status) => {
+  const color = statusColors[status] ?? muted;
+  return { color, backgroundColor: `${color}1A` };
+};
 
 export const atendimentoStyles = {
   ...commonScreenStyles,
@@ -85,5 +101,110 @@ export const atendimentoStyles = {
       backgroundColor: '#FFFFFF',
     },
     unavailableText: { color: muted, fontSize: 12, lineHeight: 17 },
+    // cartão de aluno (professor e gestão): iniciais, nome, curso e quantas solicitações
+    studentCard: {
+      marginTop: 12,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: '#FFFFFF',
+    },
+    cardPressed: { opacity: 0.7 },
+    studentAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#E8EEFF',
+    },
+    studentInitials: { color: '#3264F5', fontSize: 14, fontWeight: '700' },
+    cardTitle: { flex: 1 },
+    cardName: { color: ink, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+    cardMeta: { marginTop: 2, color: muted, fontSize: 11, lineHeight: 15 },
+    // modal com as solicitações do aluno (AtendimentoModal)
+    modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(23, 36, 65, 0.45)' },
+    modalDismiss: { flex: 1 },
+    modalSheet: {
+      maxHeight: '85%',
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 28,
+      borderTopLeftRadius: 22,
+      borderTopRightRadius: 22,
+      backgroundColor: '#FFFFFF',
+    },
+    modalHeader: { marginBottom: 6, flexDirection: 'row', alignItems: 'flex-start' },
+    modalTitle: { color: ink, fontSize: 18, lineHeight: 23, fontWeight: '700' },
+    modalError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
+    requestSection: { marginTop: 12, padding: 14, borderRadius: 14, backgroundColor: surface },
+    requestHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+    requestSubject: { flex: 1, color: ink, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+    // etiqueta colorida do status (no modal e na contagem do cartão)
+    statusPill: {
+      overflow: 'hidden',
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 10,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    requestDate: { marginTop: 3, color: muted, fontSize: 11 },
+    requestText: { marginTop: 8, color: '#394763', fontSize: 12, lineHeight: 18 },
+    replyBox: { marginTop: 10, padding: 11, borderRadius: 10, backgroundColor: '#FFFFFF' },
+    replyLabel: { color: '#3264F5', fontSize: 10, fontWeight: '700' },
+    replyText: { marginTop: 4, color: '#394763', fontSize: 12, lineHeight: 18 },
+    requestAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    requestActionText: { color: '#3264F5', fontSize: 13, fontWeight: '700' },
+    replyInput: {
+      minHeight: 96,
+      marginTop: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 11,
+      backgroundColor: '#FFFFFF',
+      color: ink,
+      fontSize: 13,
+    },
+    replyButtons: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 16 },
+    replySend: { flex: 1 },
+    replyCancel: { color: muted, fontSize: 13, fontWeight: '700' },
+    statusLabel: { marginTop: 14, color: ink, fontSize: 12, fontWeight: '700' },
+    statusOptions: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    statusOption: {
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: '#FFFFFF',
+    },
+    statusOptionActive: { borderColor: '#3264F5', backgroundColor: '#3264F5' },
+    statusOptionText: { color: muted, fontSize: 12, fontWeight: '600' },
+    statusOptionTextActive: { color: '#FFFFFF' },
+    // ações de cada solicitação (Responder / Editar / Excluir) e a edição
+    actionsRow: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 18 },
+    actionDanger: { color: colors.danger },
+    confirmBox: { marginTop: 12 },
+    confirmQuestion: { color: ink, fontSize: 12, fontWeight: '600' },
+    editLabel: { marginTop: 10, color: ink, fontSize: 12, fontWeight: '700' },
+    editInput: {
+      minHeight: 42,
+      marginTop: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      borderWidth: 1,
+      borderColor: border,
+      borderRadius: 9,
+      backgroundColor: '#FFFFFF',
+      color: ink,
+      fontSize: 13,
+    },
   }),
 };

@@ -103,7 +103,27 @@ export const boletimStyles = {
     formHint: { marginTop: 6, color: muted, fontSize: 12, lineHeight: 16 },
     formError: { marginTop: 12, color: colors.danger, fontSize: 12, lineHeight: 16 },
     saveButton: { marginTop: 16 },
-    // cartão de nota do professor (NotaCard)
+    // cartão de aluno (professor e gestão): iniciais, nome e curso
+    studentCard: {
+      marginTop: 12,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: border,
+      backgroundColor: card,
+    },
+    studentAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#E8EEFF',
+    },
+    studentInitials: { color: '#3264F5', fontSize: 14, fontWeight: '700' },
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start' },
     cardTitle: { flex: 1 },
     menu: { marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: surface },
@@ -146,5 +166,6 @@ export const boletimStyles = {
     modalRowLabel: { color: muted, fontSize: 13 },
     modalObservacao: { marginTop: 10, color: ink, fontSize: 12, lineHeight: 17, fontStyle: 'italic' },
     modalActions: { marginTop: 14 },
+    modalEmpty: { marginTop: 16, color: muted, fontSize: 12, lineHeight: 17, textAlign: 'center' },
   }),
 };

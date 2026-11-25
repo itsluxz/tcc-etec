@@ -52,6 +52,15 @@ export const avisosApi = {
   uploadImagem: (imagem) => api.post('/avisos/imagens', imagem, { timeout: 60000 }),
 };
 
+export const atendimentosApi = {
+  // filtro opcional: { usuario_id }; sem filtro, lista todos (com o nome e a turma de quem pediu)
+  list: (filtros) => api.get('/atendimentos', { params: filtros }),
+  create: (atendimento) => api.post('/atendimentos', atendimento),
+  // { status }, { resposta } ou { assunto, descricao }
+  update: (atendimentoId, atendimento) => api.put(`/atendimentos/${atendimentoId}`, atendimento),
+  remove: (atendimentoId) => api.delete(`/atendimentos/${atendimentoId}`),
+};
+
 export const cardapiosApi = {
   list: () => api.get('/cardapios'),
   get: (cardapioId) => api.get(`/cardapios/${cardapioId}`),
